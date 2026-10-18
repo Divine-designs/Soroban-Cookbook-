@@ -92,6 +92,7 @@ impl OracleContract {
         updater: Address,
         max_age: u64,
     ) -> Result<(), OracleError> {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(OracleError::AlreadyInitialized);
         }
