@@ -4,6 +4,17 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[lib]
+name = "integration_test_utils"
+path = "src/lib.rs"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration_tests.rs"
+
+[dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 hello-world = { path = "../../examples/basics/01-hello-world" }
