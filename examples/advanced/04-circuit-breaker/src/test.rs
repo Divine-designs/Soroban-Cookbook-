@@ -1,4 +1,3 @@
-#![allow(deprecated)]
 use super::*;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
@@ -22,6 +21,17 @@ fn test_initialize_and_defaults() {
     assert_eq!(client.get_failure_count(), 0);
     assert_eq!(client.get_failure_threshold(), 3);
     assert_eq!(client.get_recovery_window(), 100);
+}
+
+#[test]
+fn test_unauthorized_initialize_fails() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, CircuitBreakerContract);
+    let client = CircuitBreakerContractClient::new(&env, &contract_id);
+    let admin = Address::generate(&env);
+    // Do not mock auths - this should fail with Abort since auth is not provided
+    let result = client.try_initialize(&admin);
+    assert!(matches!(result, Err(Err(_))));
 }
 
 #[test]
