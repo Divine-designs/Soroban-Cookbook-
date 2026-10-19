@@ -1,13 +1,11 @@
+#![allow(deprecated)]
 //! Tests for panic-vs-errors patterns.
 //!
 //! Each test is labelled to show *which* failure mode it exercises.
 
 #[cfg(test)]
 mod tests {
-    use soroban_sdk::{
-        testutils::{Address as _, AuthorizedFunction, AuthorizedInvocation},
-        Address, Env, IntoVal, Symbol,
-    };
+    use soroban_sdk::{testutils::Address as _, Address, Env, Symbol};
 
     use crate::{ContractError, ErrorDemoContract, ErrorDemoContractClient};
 
@@ -52,6 +50,26 @@ mod tests {
         let user = Address::generate(&client.env);
 
         let result = client.try_withdraw(&user, &0);
+        assert_eq!(result, Err(Ok(ContractError::ZeroAmount)));
+    }
+
+    /// `deposit` rejects negative amounts with a typed error.
+    #[test]
+    fn test_error_negative_amount_deposit() {
+        let (_, client, _) = setup();
+        let user = Address::generate(&client.env);
+
+        let result = client.try_deposit(&user, &-50);
+        assert_eq!(result, Err(Ok(ContractError::ZeroAmount)));
+    }
+
+    /// `withdraw` rejects negative amounts with a typed error.
+    #[test]
+    fn test_error_negative_amount_withdraw() {
+        let (_, client, _) = setup();
+        let user = Address::generate(&client.env);
+
+        let result = client.try_withdraw(&user, &-50);
         assert_eq!(result, Err(Ok(ContractError::ZeroAmount)));
     }
 

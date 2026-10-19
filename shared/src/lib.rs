@@ -14,8 +14,11 @@
 //! ### Authorization Validation
 //! Provides patterns and utilities for validating user permissions and access controls.
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
 use soroban_sdk::{contracterror, Address, Env, String, Vec};
+
+#[cfg(feature = "testutils")]
+pub mod test_events;
 
 // ---------------------------------------------------------------------------
 // Error Types

@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! # Optimized Token Operations
 //!
 //! This module demonstrates best practices for optimizing token transfers and storage patterns
@@ -11,25 +12,26 @@
 //! 3. **Reduced Storage Operations**: Minimize reads/writes through better data organization
 //! 4. **Early Validation**: Check constraints before expensive operations
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
 
-use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, token::TokenClient, vec, Address, Env,
-    Map, Vec,
-};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, Map, Vec};
 
 // ============================================================================
 // Standard Implementation (Baseline for benchmarking)
 // ============================================================================
 
+#[cfg(any(not(target_arch = "wasm32"), test, feature = "testutils"))]
 #[contracttype]
 #[derive(Clone)]
 pub enum StandardDataKey {
     Underlying,
     TotalSupply,
     Balance(Address),
+    /// Reentrancy guard flag for `wrap`.
+    Entered,
 }
 
+#[cfg(any(not(target_arch = "wasm32"), test, feature = "testutils"))]
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -38,14 +40,21 @@ pub enum StandardError {
     InvalidAmount = 2,
     InsufficientBalance = 3,
     ArithmeticOverflow = 4,
+    AlreadyInitialized = 5,
+    ReentrancyDetected = 6,
 }
 
+#[cfg(any(not(target_arch = "wasm32"), test, feature = "testutils"))]
 #[contract]
 pub struct StandardTokenOps;
 
+#[cfg(any(not(target_arch = "wasm32"), test, feature = "testutils"))]
 #[contractimpl]
 impl StandardTokenOps {
     pub fn initialize(env: Env, underlying: Address) -> Result<(), StandardError> {
+        if env.storage().instance().has(&StandardDataKey::Underlying) {
+            return Err(StandardError::AlreadyInitialized);
+        }
         env.storage()
             .instance()
             .set(&StandardDataKey::Underlying, &underlying);
@@ -66,7 +75,7 @@ impl StandardTokenOps {
             .get(&StandardDataKey::Underlying)
             .ok_or(StandardError::NotInitialized)?;
 
-        let old_balance = env
+        let old_balance: i128 = env
             .storage()
             .persistent()
             .get(&StandardDataKey::Balance(user.clone()))
@@ -76,7 +85,7 @@ impl StandardTokenOps {
             .checked_add(amount)
             .ok_or(StandardError::ArithmeticOverflow)?;
 
-        let old_supply = env
+        let old_supply: i128 = env
             .storage()
             .instance()
             .get(&StandardDataKey::TotalSupply)
@@ -88,15 +97,36 @@ impl StandardTokenOps {
 
         user.require_auth();
 
-        let wrapper = env.current_contract_address();
-        TokenClient::new(&env, &underlying_addr).transfer(&user, &wrapper, &amount);
+        if env
+            .storage()
+            .instance()
+            .get(&StandardDataKey::Entered)
+            .unwrap_or(false)
+        {
+            return Err(StandardError::ReentrancyDetected);
+        }
+        env.storage()
+            .instance()
+            .set(&StandardDataKey::Entered, &true);
 
+        // Checks-effects-interactions: update balances before the external
+        // call, and keep the guard set so a hookable underlying token cannot
+        // reenter `wrap` and mint against the same deposit. Same pattern as
+        // examples/tokens/06-token-wrapper.
         env.storage()
             .persistent()
-            .set(&StandardDataKey::Balance(user), &new_balance);
+            .set(&StandardDataKey::Balance(user.clone()), &new_balance);
         env.storage()
             .instance()
             .set(&StandardDataKey::TotalSupply, &new_supply);
+
+        let wrapper = env.current_contract_address();
+        soroban_sdk::token::TokenClient::new(&env, &underlying_addr)
+            .transfer(&user, &wrapper, &amount);
+
+        env.storage()
+            .instance()
+            .set(&StandardDataKey::Entered, &false);
 
         Ok(new_balance)
     }
@@ -292,9 +322,7 @@ impl OptimizedTokenOps {
 
         let mut total: i128 = 0;
         for entry in balances.iter() {
-            total = total
-                .checked_add(entry.1)
-                .unwrap_or(i128::MAX);
+            total = total.checked_add(entry.1).unwrap_or(i128::MAX);
         }
         total
     }

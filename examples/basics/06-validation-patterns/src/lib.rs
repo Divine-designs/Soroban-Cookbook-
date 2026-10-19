@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! # Validation Patterns
 //!
 //! This contract demonstrates comprehensive input validation patterns in Soroban contracts.
@@ -23,7 +24,7 @@
 //! - Multi-signature requirements
 //! - Permission checks for specific operations
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec};
 use soroban_validation::*;
 
@@ -475,7 +476,7 @@ impl ValidationContract {
             .set(&DataKey::Balance(from.clone()), &(from_balance - amount));
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(to), &(to_balance + amount));
+            .set(&DataKey::Balance(to.clone()), &(to_balance + amount));
 
         // Update last action timestamp
         env.storage()

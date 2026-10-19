@@ -1,10 +1,13 @@
+#![allow(deprecated)]
 //! # Event History Example
 //!
 //! Demonstrates on-chain history storage, pagination, and time filtering for audit trails.
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 #[contracttype]
 #[derive(Clone)]
@@ -35,6 +38,13 @@ pub struct HistoryStats {
     pub max_entries: u32,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HistoryPage {
+    pub entries: Vec<AuditEntry>,
+    pub next_cursor: Option<u32>,
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -44,6 +54,7 @@ pub enum HistoryError {
     Unauthorized = 3,
     InvalidCapacity = 4,
     InvalidPagination = 5,
+    InvalidCursor = 6,
 }
 
 const EVENT_AUDIT: Symbol = symbol_short!("audit");
@@ -62,7 +73,9 @@ impl EventHistory {
         }
 
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::MaxEntries, &max_entries);
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxEntries, &max_entries);
         env.storage().instance().set(&DataKey::StartIndex, &0u32);
         env.storage().instance().set(&DataKey::NextIndex, &0u32);
         env.storage().instance().set(&DataKey::Count, &0u32);
@@ -89,7 +102,9 @@ impl EventHistory {
                 .persistent()
                 .remove(&DataKey::Entry(start_index));
             start_index = start_index.checked_add(1).unwrap_or(0);
-            env.storage().instance().set(&DataKey::StartIndex, &start_index);
+            env.storage()
+                .instance()
+                .set(&DataKey::StartIndex, &start_index);
         } else {
             count = count.checked_add(1).unwrap_or(count);
             env.storage().instance().set(&DataKey::Count, &count);
@@ -103,9 +118,14 @@ impl EventHistory {
             details: details.clone(),
         };
 
-        env.storage().persistent().set(&DataKey::Entry(next_index), &entry);
-        env.storage().instance().set(&DataKey::NextIndex, &(next_index + 1));
-        env.events().publish((EVENT_AUDIT, action, actor.clone()), details);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Entry(next_index), &entry);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextIndex, &(next_index + 1));
+        env.events()
+            .publish((EVENT_AUDIT, action, actor.clone()), details);
 
         Ok(next_index)
     }
@@ -135,12 +155,59 @@ impl EventHistory {
         result
     }
 
-    pub fn query_by_time(
+    /// Return a page of events using an opaque cursor.
+    ///
+    /// The cursor is a stable absolute storage index. It may be reused across
+    /// requests as long as the history window has not advanced past it.
+    /// If the contract has trimmed older entries due to capacity limits, an
+    /// expired cursor is rejected with `InvalidCursor`.
+    pub fn get_events_page(
         env: Env,
-        earliest: u64,
-        latest: u64,
+        cursor: Option<u32>,
         limit: u32,
-    ) -> Vec<AuditEntry> {
+    ) -> Result<HistoryPage, HistoryError> {
+        if limit == 0 {
+            return Ok(HistoryPage {
+                entries: Vec::new(&env),
+                next_cursor: None,
+            });
+        }
+
+        let start_index = read_start_index(&env);
+        let next_index = read_next_index(&env);
+        let start = cursor.unwrap_or(start_index);
+
+        if start < start_index || start > next_index {
+            return Err(HistoryError::InvalidCursor);
+        }
+
+        if start >= next_index {
+            return Ok(HistoryPage {
+                entries: Vec::new(&env),
+                next_cursor: None,
+            });
+        }
+
+        let end = (start + limit).min(next_index);
+        let mut result = Vec::new(&env);
+        let mut index = start;
+
+        while index < end {
+            if let Some(entry) = env.storage().persistent().get(&DataKey::Entry(index)) {
+                result.push_back(entry);
+            }
+            index += 1;
+        }
+
+        let next_cursor = if end >= next_index { None } else { Some(end) };
+
+        Ok(HistoryPage {
+            entries: result,
+            next_cursor,
+        })
+    }
+
+    pub fn query_by_time(env: Env, earliest: u64, latest: u64, limit: u32) -> Vec<AuditEntry> {
         if limit == 0 {
             return Vec::new(&env);
         }

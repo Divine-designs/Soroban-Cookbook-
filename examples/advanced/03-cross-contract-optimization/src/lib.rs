@@ -1,10 +1,11 @@
+#![allow(deprecated)]
 //! # Cross-Contract Optimization
 //!
 //! This example compares an unoptimized sequential caller contract with an
 //! optimized batched caller contract. The target contract stores and updates
 //! numeric values keyed by `Symbol`.
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
 
 #[cfg(test)]
 extern crate std;
@@ -87,11 +88,7 @@ pub struct OptimizedCaller;
 #[contractimpl]
 impl OptimizedCaller {
     /// Invoke the target contract once with a batched update argument.
-    pub fn invoke_updates_batched(
-        env: Env,
-        target: Address,
-        updates: Vec<PackedUpdate>,
-    ) -> i128 {
+    pub fn invoke_updates_batched(env: Env, target: Address, updates: Vec<PackedUpdate>) -> i128 {
         let client = TargetContractClient::new(&env, &target);
         client.batch_update_entries(&updates)
     }

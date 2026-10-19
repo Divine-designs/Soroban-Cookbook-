@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+#![allow(dead_code, unused_imports)]
 use optimized_token_operations::{
     BatchTransfer, OptimizedError, OptimizedTokenOps, OptimizedTokenOpsClient, StandardError,
     StandardTokenOps, StandardTokenOpsClient,
@@ -101,8 +103,8 @@ fn benchmark_standard_vs_optimized() {
         let _ = standard.balance(&recipient);
         let budget_after = env.budget().get_budget();
         standard_total_cpu += budget_before.cpu_instructions - budget_after.cpu_instructions;
-        standard_total_mem += (budget_before.mem_bytes as i64 - budget_after.mem_bytes as i64)
-            .max(0) as u64;
+        standard_total_mem +=
+            (budget_before.mem_bytes as i64 - budget_after.mem_bytes as i64).max(0) as u64;
     }
 
     BenchmarkResult {
@@ -161,3 +163,5 @@ fn benchmark_standard_vs_optimized() {
     println!("4. ✓ Memory Efficiency: Reuse loaded data across multiple operations");
     println!("{}", "=".repeat(80));
 }
+
+fn main() {}

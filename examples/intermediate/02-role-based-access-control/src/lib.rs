@@ -1,6 +1,9 @@
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
+#![allow(deprecated)]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -78,9 +81,8 @@ impl RoleBasedAccessControl {
     ) -> Result<(), RbacError> {
         caller.require_auth();
         Self::require_initialized(&env)?;
-        Self::require_can_manage(&env, &caller, &role)?;
-
         let old_role = Self::get_role_internal(&env, &account);
+        Self::require_can_manage(&env, &caller, old_role, role)?;
         env.storage()
             .persistent()
             .set(&DataKey::UserRole(account.clone()), &role);
@@ -109,7 +111,9 @@ impl RoleBasedAccessControl {
             return Err(RbacError::Unauthorized);
         }
 
-        env.storage().persistent().remove(&DataKey::UserRole(account.clone()));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::UserRole(account.clone()));
 
         env.events().publish(
             (CONTRACT_NS, ACTION_ROLE_CHANGE, account.clone()),
@@ -129,17 +133,13 @@ impl RoleBasedAccessControl {
         user_role as u32 >= role as u32
     }
 
-    pub fn require_role(
-        env: Env,
-        caller: Address,
-        allowed: Vec<Role>,
-    ) -> Result<(), RbacError> {
+    pub fn require_role(env: Env, caller: Address, allowed: Vec<Role>) -> Result<(), RbacError> {
         caller.require_auth();
         Self::require_initialized(&env)?;
 
         let user_role = Self::get_role_internal(&env, &caller);
         for allowed_role in allowed.iter() {
-            if user_role as u32 >= *allowed_role as u32 {
+            if user_role as u32 >= allowed_role as u32 {
                 return Ok(());
             }
         }
@@ -147,7 +147,11 @@ impl RoleBasedAccessControl {
     }
 
     pub fn admin_action(env: Env, caller: Address, value: u64) -> Result<u64, RbacError> {
-        Self::require_role(env.clone(), caller.clone(), Vec::from_array(&env, [Role::Admin]))?;
+        Self::require_role(
+            env.clone(),
+            caller.clone(),
+            Vec::from_array(&env, [Role::Admin]),
+        )?;
         Ok(value * 2)
     }
 
@@ -166,13 +170,17 @@ impl RoleBasedAccessControl {
             .unwrap_or(Role::User)
     }
 
+    /// A caller may only change an account's role if it outranks both the
+    /// account's current role and the new role. Checking only the new role
+    /// would let an Admin "grant" `User` to the Owner, silently demoting it.
     fn require_can_manage(
         env: &Env,
         caller: &Address,
-        target: &Role,
+        current: Role,
+        target: Role,
     ) -> Result<(), RbacError> {
         let caller_role = Self::get_role_internal(env, caller);
-        if Self::can_grant(caller_role, *target) {
+        if Self::can_revoke(caller_role, current) && Self::can_grant(caller_role, target) {
             Ok(())
         } else {
             Err(RbacError::Unauthorized)
@@ -195,3 +203,6 @@ impl RoleBasedAccessControl {
         }
     }
 }
+
+#[cfg(test)]
+mod test;

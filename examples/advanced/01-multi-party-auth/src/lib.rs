@@ -1,4 +1,5 @@
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
+#![allow(deprecated)]
 
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, Symbol, Vec,
@@ -160,30 +161,10 @@ impl MultiPartyAuthContract {
         // TokenClient::new(&env, &token_id).transfer(&signers.get_unchecked(0), &to, &amount);
     }
 
-    /// N-of-N multi-sig transfer using a pre-encoded auth-vector blob.
-    ///
-    /// Decodes and validates the blob, then calls `require_auth()` on every
-    /// signer. Useful when the signer set is stored on-chain and reused across
-    /// multiple calls.
-    pub fn multi_sig_transfer_encoded(
-        env: Env,
-        encoded_signers: Bytes,
-        _to: Address,
-        _amount: i128,
-    ) {
-        let signers = Self::decode_and_validate(&env, &encoded_signers);
-        for signer in signers.iter() {
-            signer.require_auth();
-        }
-
-        // Audit trail for encoded multi-sig action
-        env.events().publish(
-            (CONTRACT_NS, ACTION_AUDIT),
-            AuditTrailEventData {
-                details: symbol_short!("msig_enc"),
-                timestamp: env.ledger().timestamp(),
-            },
-        );
+    /// Multi-sig transfer using a pre-encoded auth vector.
+    pub fn multi_sig_transfer_encoded(env: Env, encoded: Bytes, to: Address, amount: i128) {
+        let signers = Self::decode_and_validate(&env, &encoded);
+        Self::multi_sig_transfer(env, signers, to, amount);
     }
 
     /// M-of-N threshold approval.
@@ -296,20 +277,7 @@ impl MultiPartyAuthContract {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // Multisig management (Issue #435)
-    //
-    // These functions allow an existing signer to rotate the signer set and
-    // adjust the approval threshold for a named multisig group.  Every
-    // mutation requires at least one current signer to authorize, and emits
-    // a structured event so off-chain indexers can track the full history.
-    // -----------------------------------------------------------------------
-
     /// Add `new_signer` to the signer set for `proposal_id`.
-    ///
-    /// Requires authorization from `caller`, who must already be a member of
-    /// the current signer set.  Panics if `new_signer` is already present or
-    /// if adding them would exceed `MAX_SIGNERS`.
     pub fn add_signer(env: Env, caller: Address, proposal_id: Symbol, new_signer: Address) {
         caller.require_auth();
 
@@ -343,10 +311,6 @@ impl MultiPartyAuthContract {
     }
 
     /// Remove `signer_to_remove` from the signer set for `proposal_id`.
-    ///
-    /// Requires authorization from `caller`, who must be a current signer.
-    /// Panics if the removal would leave fewer signers than the current
-    /// threshold (which would make the multisig permanently locked).
     pub fn remove_signer(
         env: Env,
         caller: Address,
@@ -398,9 +362,6 @@ impl MultiPartyAuthContract {
     }
 
     /// Update the approval threshold for `proposal_id`.
-    ///
-    /// Requires authorization from `caller`, who must be a current signer.
-    /// The new threshold must be ≥ 1 and ≤ the current number of signers.
     pub fn set_threshold(env: Env, caller: Address, proposal_id: Symbol, new_threshold: u32) {
         caller.require_auth();
 
@@ -434,10 +395,6 @@ impl MultiPartyAuthContract {
     }
 
     /// Rotate a signer: atomically replace `old_signer` with `new_signer`.
-    ///
-    /// Requires authorization from `caller`, who must be a current signer.
-    /// This is equivalent to `remove_signer` + `add_signer` but is atomic
-    /// and never temporarily violates the threshold invariant.
     pub fn rotate_signer(
         env: Env,
         caller: Address,

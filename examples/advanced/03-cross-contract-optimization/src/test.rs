@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use super::*;
 use soroban_sdk::{symbol_short, testutils::Address as _, vec, Address, Env};
 use std::println;
@@ -61,7 +62,16 @@ fn test_sequential_and_batched_cross_contract_updates_match() {
     env.budget().print();
 
     assert_eq!(batched_last, sequential_last);
-    assert_eq!(optimized_target_client.get_entry(&symbol_short!("alpha")), 15);
-    assert_eq!(optimized_target_client.get_entry(&symbol_short!("beta")), 20);
-    assert_eq!(optimized_target_client.get_entry(&symbol_short!("gamma")), 15);
+    assert_eq!(
+        optimized_target_client.get_entry(&symbol_short!("alpha")),
+        15
+    );
+    assert_eq!(
+        optimized_target_client.get_entry(&symbol_short!("beta")),
+        20
+    );
+    assert_eq!(
+        optimized_target_client.get_entry(&symbol_short!("gamma")),
+        15
+    );
 }
