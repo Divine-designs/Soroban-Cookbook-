@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! Test suite for Custom Errors Contract
 //!
 //! This test file demonstrates comprehensive testing of custom error handling.
@@ -235,7 +236,7 @@ fn test_event_logging_with_errors() {
     // Verify that at least one event was emitted by the contract
     let events = env.events().all();
     assert!(
-        !events.is_empty(),
+        !events.events().is_empty(),
         "Expected at least one event to be emitted"
     );
 }

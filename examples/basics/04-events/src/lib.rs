@@ -67,7 +67,8 @@
 //! Events are published via `env.events().publish()` and can be
 //! queried off-chain for indexing and monitoring.
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
+#![allow(deprecated)]
 
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol};
 
@@ -308,6 +309,27 @@ impl EventsContract {
         for i in 0..count {
             env.events().publish((symbol_short!("multi"), i), i as u64);
         }
+    }
+
+    /// Increment a simple instance counter (used by integration tests).
+    pub fn increment(env: Env) {
+        let mut num: u32 = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("num"))
+            .unwrap_or(0);
+        num += 1;
+        env.storage().instance().set(&symbol_short!("num"), &num);
+        env.events()
+            .publish((symbol_short!("number"), symbol_short!("inc")), num);
+    }
+
+    /// Return the current counter value.
+    pub fn get_number(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&symbol_short!("num"))
+            .unwrap_or(0)
     }
 
     // -----------------------------------------------------------------------

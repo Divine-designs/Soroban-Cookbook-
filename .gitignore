@@ -6,12 +6,16 @@ Cargo.lock
 
 # Soroban
 .soroban/
+.soroban-ledger/
+.stellar/
+soroban-ledger*.json
 *.wasm
 *.optimized.wasm
 
 # IDE
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
@@ -24,6 +28,15 @@ Cargo.lock
 # Testing
 coverage/
 *.profraw
+test_snapshots/
+tests/fuzz/artifacts/
+tests/fuzz/corpus/
+
+# Node / webapp
+webapp/node_modules/
+
+# Local binaries (e.g. accidental `typos` copy in repo root)
+/typos
 
 # Build artifacts
 *.so
@@ -31,7 +44,7 @@ coverage/
 *.dll
 
 # Documentation
-book-output/
+book/book-output/
 docs/_build/
 
 # Temporary files
@@ -39,7 +52,6 @@ tmp/
 temp/
 *.tmp
 
-ROADMAP.md
 IMPLEMENTATION_SUMMARY.md
 PROJECT_OVERVIEW.md
 phase 1 issues.md
@@ -49,12 +61,14 @@ phase 4 issues.md
 phase 5 issues.md
 phase 6 issues.md
 phase 7 issues.md
-phase  8issues.md
+phase 8 issues.md
 issue-13-requirement.md
 
 .agent/
 .agents/
 issue.md
-issue.md
-.agent/
-.agents/
+GEMINI.md
+
+.GITHUB_ISSUES_BATCH_REPORT.md
+issues.md
+.opencode

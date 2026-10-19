@@ -1,7 +1,8 @@
 //! # Authentication Patterns Contract
 //!
 //! Demonstrates core address-authentication patterns using Soroban's
-//! `require_auth()` function.
+//! `require_auth()` function, along with custom authorization logic including
+//! role-based access control, time-based restrictions, and state-based gating.
 //!
 //! ## What `require_auth()` does
 //!
@@ -9,13 +10,50 @@
 //! - Works for user accounts (ed25519 keypairs) and contract addresses alike.
 //! - Protects against replays -- the host records the nonce automatically.
 //! - Is essential for any state-mutating operation in multi-user contracts.
+//!
+//! ## Custom Authorization Patterns
+//!
+//! Beyond basic authentication, this contract demonstrates:
+//! - **Role-Based Access Control (RBAC)**: Admin, Moderator, and User roles
+//! - **Time-Based Restrictions**: Time-locks and cooldown periods
+//! - **State-Based Authorization**: Contract state gating (Active/Paused/Frozen)
 
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
+#![allow(deprecated)]
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, vec, Address, Env, Symbol,
     Vec,
 };
+use soroban_validation::*;
+
+// ---------------------------------------------------------------------------
+// Role definitions
+// ---------------------------------------------------------------------------
+
+/// Role hierarchy for access control.
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum Role {
+    Admin = 0,
+    Moderator = 1,
+    User = 2,
+}
+
+// ---------------------------------------------------------------------------
+// Contract state
+// ---------------------------------------------------------------------------
+
+/// Global contract state for state-based authorization.
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum ContractState {
+    Active = 0,
+    Paused = 1,
+    Frozen = 2,
+}
 
 // ---------------------------------------------------------------------------
 // Storage keys
@@ -26,12 +64,22 @@ use soroban_sdk::{
 /// * `Admin`              -- the privileged admin address (instance storage).
 /// * `Balance(Address)`   -- per-account token balance (persistent storage).
 /// * `Allowance(from, spender)` -- spend allowance (persistent storage).
+/// * `UserRole(Address)`  -- role assigned to an address (persistent storage).
+/// * `TimeLock`           -- global unlock timestamp (instance storage).
+/// * `CooldownPeriod`     -- cooldown duration in seconds (instance storage).
+/// * `LastAction(Address)` -- last action timestamp per address (persistent storage).
+/// * `State`              -- current contract state (instance storage).
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
     Admin,
     Balance(Address),
     Allowance(Address, Address),
+    UserRole(Address),
+    TimeLock,
+    CooldownPeriod,
+    LastAction(Address),
+    State,
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +99,47 @@ pub enum AuthError {
     AlreadyInitialized = 3,
     /// The sender does not have enough balance to complete the transfer.
     InsufficientBalance = 4,
+    /// The action is time-locked until a future timestamp.
+    TimeLocked = 5,
+    /// The cooldown period has not elapsed since the last action.
+    CooldownActive = 6,
+    /// The contract is not in the required state for this operation.
+    InvalidState = 7,
+    /// The caller does not have the required role.
+    InsufficientRole = 8,
+    /// The specified amount is invalid (e.g. negative or zero).
+    InvalidAmount = 9,
 }
+
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+
+/// Payload for an admin-action event.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminActionEventData {
+    /// Identifier of the specific action performed.
+    pub action: Symbol,
+    /// Timestamp when the action was executed.
+    pub timestamp: u64,
+}
+
+/// Payload for an audit-trail event.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AuditTrailEventData {
+    /// Free-form description or reference tag.
+    pub details: Symbol,
+    /// Ledger timestamp at emission time.
+    pub timestamp: u64,
+}
+
+/// Namespace symbol used as the first topic of every event this contract emits.
+const CONTRACT_NS: Symbol = symbol_short!("auth");
+/// Naming convention: `snake_case` action names in topic[1].
+const ACTION_ADMIN: Symbol = symbol_short!("admin");
+const ACTION_AUDIT: Symbol = symbol_short!("audit");
 
 // ---------------------------------------------------------------------------
 // Contract
@@ -74,6 +162,16 @@ impl AuthContract {
         }
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
+
+        // Audit trail for contract initialization
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin),
+            AuditTrailEventData {
+                details: symbol_short!("init"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+
         Ok(())
     }
 
@@ -98,9 +196,19 @@ impl AuthContract {
             .get(&DataKey::Admin)
             .ok_or(AuthError::NotAdmin)?;
 
-        if admin != stored_admin {
+        // Use shared validation pattern
+        if require_admin(stored_admin, admin.clone()).is_err() {
             return Err(AuthError::NotAdmin);
         }
+
+        // Log admin action
+        env.events().publish(
+            (CONTRACT_NS, ACTION_ADMIN, admin),
+            AdminActionEventData {
+                action: symbol_short!("action"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
 
         Ok(value * 2)
     }
@@ -119,13 +227,27 @@ impl AuthContract {
             .get(&DataKey::Admin)
             .ok_or(AuthError::NotAdmin)?;
 
-        if admin != stored_admin {
+        // Use shared validation pattern
+        if require_admin(stored_admin, admin.clone()).is_err() {
             return Err(AuthError::NotAdmin);
         }
 
+        let old_balance: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Balance(user.clone()))
+            .unwrap_or(0);
+
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(user), &amount);
+            .set(&DataKey::Balance(user.clone()), &amount);
+
+        // Audit trail for balance change
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin, user),
+            (old_balance, amount),
+        );
+
         Ok(())
     }
 
@@ -139,13 +261,18 @@ impl AuthContract {
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) -> Result<(), AuthError> {
         from.require_auth();
 
+        if amount <= 0 {
+            return Err(AuthError::InvalidAmount);
+        }
+
         let from_balance: i128 = env
             .storage()
             .persistent()
             .get(&DataKey::Balance(from.clone()))
             .unwrap_or(0);
 
-        if amount <= 0 || from_balance < amount {
+        // Use shared validation pattern
+        if require_sufficient_balance(from_balance, amount).is_err() {
             return Err(AuthError::InsufficientBalance);
         }
 
@@ -155,12 +282,19 @@ impl AuthContract {
             .get(&DataKey::Balance(to.clone()))
             .unwrap_or(0);
 
+        let new_from_balance = from_balance
+            .checked_sub(amount)
+            .ok_or(AuthError::InsufficientBalance)?;
+        let new_to_balance = to_balance
+            .checked_add(amount)
+            .ok_or(AuthError::Unauthorized)?;
+
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(from), &(from_balance - amount));
+            .set(&DataKey::Balance(from), &new_from_balance);
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(to), &(to_balance + amount));
+            .set(&DataKey::Balance(to), &new_to_balance);
 
         Ok(())
     }
@@ -175,6 +309,11 @@ impl AuthContract {
         amount: i128,
     ) -> Result<(), AuthError> {
         from.require_auth();
+
+        if amount <= 0 {
+            return Err(AuthError::InvalidAmount);
+        }
+
         env.storage()
             .persistent()
             .set(&DataKey::Allowance(from, spender), &amount);
@@ -195,6 +334,10 @@ impl AuthContract {
         amount: i128,
     ) -> Result<(), AuthError> {
         spender.require_auth();
+
+        if amount <= 0 {
+            return Err(AuthError::InvalidAmount);
+        }
 
         let allowance: i128 = env
             .storage()
@@ -222,15 +365,25 @@ impl AuthContract {
             .get(&DataKey::Balance(to.clone()))
             .unwrap_or(0);
 
+        let new_from_balance = from_balance
+            .checked_sub(amount)
+            .ok_or(AuthError::InsufficientBalance)?;
+        let new_to_balance = to_balance
+            .checked_add(amount)
+            .ok_or(AuthError::Unauthorized)?;
+        let new_allowance = allowance
+            .checked_sub(amount)
+            .ok_or(AuthError::Unauthorized)?;
+
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(from.clone()), &(from_balance - amount));
+            .set(&DataKey::Balance(from.clone()), &new_from_balance);
         env.storage()
             .persistent()
-            .set(&DataKey::Balance(to), &(to_balance + amount));
+            .set(&DataKey::Balance(to), &new_to_balance);
         env.storage()
             .persistent()
-            .set(&DataKey::Allowance(from, spender), &(allowance - amount));
+            .set(&DataKey::Allowance(from, spender), &new_allowance);
 
         Ok(())
     }
@@ -285,6 +438,287 @@ impl AuthContract {
         user.require_auth();
         env.events()
             .publish((symbol_short!("event"), user), message);
+    }
+
+    // ==================== ROLE-BASED ACCESS CONTROL ====================
+
+    /// Grant a role to an address (admin-only).
+    pub fn grant_role(
+        env: Env,
+        admin: Address,
+        account: Address,
+        role: Role,
+    ) -> Result<(), AuthError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+
+        let old_role: Role = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRole(account.clone()))
+            .unwrap_or(Role::User);
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::UserRole(account.clone()), &role);
+
+        // Emit audit event with before/after state
+        env.events()
+            .publish((CONTRACT_NS, ACTION_AUDIT, account), (old_role, role));
+
+        Ok(())
+    }
+
+    /// Revoke a role from an address (admin-only).
+    pub fn revoke_role(env: Env, admin: Address, account: Address) -> Result<(), AuthError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+
+        let old_role: Role = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRole(account.clone()))
+            .unwrap_or(Role::User);
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::UserRole(account.clone()));
+
+        // Emit audit event
+        env.events()
+            .publish((CONTRACT_NS, ACTION_AUDIT, account), (old_role, Role::User));
+
+        Ok(())
+    }
+
+    /// Get the role of an address (returns User if not set).
+    pub fn get_role(env: Env, account: Address) -> u32 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::UserRole(account))
+            .unwrap_or(Role::User) as u32
+    }
+
+    /// Check if an address has a specific role.
+    pub fn has_role(env: Env, account: Address, role: Role) -> bool {
+        let user_role: Role = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRole(account))
+            .unwrap_or(Role::User);
+        user_role as u32 <= role as u32
+    }
+
+    /// Admin-only action demonstrating role-based access control.
+    pub fn admin_role_action(env: Env, caller: Address, value: u64) -> Result<u64, AuthError> {
+        caller.require_auth();
+        Self::require_role(&env, &caller, &[Role::Admin])?;
+
+        let result = value * 2;
+
+        // Log admin role action
+        env.events().publish(
+            (CONTRACT_NS, ACTION_ADMIN, caller),
+            AdminActionEventData {
+                action: symbol_short!("role_act"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+
+        Ok(result)
+    }
+
+    /// Moderator action (accessible by Admin and Moderator).
+    pub fn moderator_action(env: Env, caller: Address, value: u64) -> Result<u64, AuthError> {
+        caller.require_auth();
+        Self::require_role(&env, &caller, &[Role::Admin, Role::Moderator])?;
+
+        let result = value + 10;
+
+        // Log moderator action (audit trail)
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, caller),
+            AuditTrailEventData {
+                details: symbol_short!("mod_act"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+
+        Ok(result)
+    }
+
+    // ==================== TIME-BASED RESTRICTIONS ====================
+
+    /// Set a global time-lock (admin-only).
+    pub fn set_time_lock(env: Env, admin: Address, unlock_time: u64) -> Result<(), AuthError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+
+        let old_time: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TimeLock)
+            .unwrap_or(0);
+
+        env.storage()
+            .instance()
+            .set(&DataKey::TimeLock, &unlock_time);
+
+        // Audit trail for timelock configuration
+        env.events()
+            .publish((CONTRACT_NS, ACTION_AUDIT, admin), (old_time, unlock_time));
+
+        Ok(())
+    }
+
+    /// Action that is blocked until the time-lock expires.
+    pub fn time_locked_action(env: Env, caller: Address) -> Result<u64, AuthError> {
+        caller.require_auth();
+
+        let unlock_time: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TimeLock)
+            .unwrap_or(0);
+
+        let current_time = env.ledger().timestamp();
+        if current_time < unlock_time {
+            return Err(AuthError::TimeLocked);
+        }
+
+        Ok(current_time)
+    }
+
+    /// Set the cooldown period (admin-only).
+    pub fn set_cooldown(env: Env, admin: Address, period: u64) -> Result<(), AuthError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+
+        let old_period: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CooldownPeriod)
+            .unwrap_or(0);
+
+        env.storage()
+            .instance()
+            .set(&DataKey::CooldownPeriod, &period);
+
+        // Audit trail for cooldown configuration
+        env.events()
+            .publish((CONTRACT_NS, ACTION_AUDIT, admin), (old_period, period));
+
+        Ok(())
+    }
+
+    /// Action with per-address cooldown enforcement.
+    pub fn cooldown_action(env: Env, caller: Address) -> Result<u64, AuthError> {
+        caller.require_auth();
+
+        let cooldown_period: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CooldownPeriod)
+            .unwrap_or(0);
+
+        let last_action: u64 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LastAction(caller.clone()))
+            .unwrap_or(0);
+
+        let current_time = env.ledger().timestamp();
+
+        if last_action > 0 && current_time < last_action + cooldown_period {
+            return Err(AuthError::CooldownActive);
+        }
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::LastAction(caller), &current_time);
+
+        Ok(current_time)
+    }
+
+    // ==================== STATE-BASED AUTHORIZATION ====================
+
+    /// Set the contract state (admin-only).
+    pub fn set_state(env: Env, admin: Address, state: ContractState) -> Result<(), AuthError> {
+        admin.require_auth();
+        Self::require_admin(&env, &admin)?;
+
+        let old_state: ContractState = env
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .unwrap_or(ContractState::Active);
+
+        env.storage().instance().set(&DataKey::State, &state);
+
+        // Audit trail for state change
+        env.events()
+            .publish((CONTRACT_NS, ACTION_AUDIT, admin), (old_state, state));
+
+        Ok(())
+    }
+
+    /// Get the current contract state.
+    pub fn get_state(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::State)
+            .unwrap_or(ContractState::Active) as u32
+    }
+
+    /// Action that only works when the contract is Active.
+    pub fn active_only_action(env: Env, caller: Address) -> Result<u64, AuthError> {
+        caller.require_auth();
+
+        let state: ContractState = env
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .unwrap_or(ContractState::Active);
+
+        if state != ContractState::Active {
+            return Err(AuthError::InvalidState);
+        }
+
+        Ok(env.ledger().timestamp())
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    /// Verify that the caller is the admin.
+    fn require_admin(env: &Env, caller: &Address) -> Result<(), AuthError> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(AuthError::NotAdmin)?;
+
+        if caller != &admin {
+            return Err(AuthError::NotAdmin);
+        }
+
+        Ok(())
+    }
+
+    /// Verify that the caller has one of the required roles.
+    fn require_role(env: &Env, caller: &Address, allowed_roles: &[Role]) -> Result<(), AuthError> {
+        let user_role: Role = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRole(caller.clone()))
+            .unwrap_or(Role::User);
+
+        for role in allowed_roles {
+            if user_role as u32 <= *role as u32 {
+                return Ok(());
+            }
+        }
+
+        Err(AuthError::InsufficientRole)
     }
 }
 

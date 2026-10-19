@@ -1,195 +1,114 @@
 # NFT Examples
 
-Non-Fungible Token (NFT) implementations and patterns on Soroban.
+Soroban smart contract examples for Non-Fungible Tokens — from a minimal mintable NFT through a full JSON-schema metadata standard to a marketplace with auctions, bundles, and royalties.
 
-## Examples
-
-### Basic NFTs
-
-- **Simple NFT** - Basic NFT with minting and transfers
-- **NFT with Metadata** - NFTs with rich metadata
-- **Enumerable NFT** - NFT with iteration capabilities
-
-### NFT Marketplaces
-
-- **Simple Marketplace** - Buy and sell NFTs
-- **Auction Contract** - English and Dutch auctions
-- **Offer System** - Peer-to-peer NFT trading
-
-### Advanced Patterns
-
-- **Composable NFTs** - NFTs that contain other NFTs
-- **Fractionalized NFTs** - Split NFT ownership
-- **Dynamic NFTs** - NFTs that change over time
-- **Soulbound Tokens** - Non-transferable NFTs
-
-### Gaming & Collectibles
-
-- **Achievement System** - Mint NFTs for accomplishments
-- **Breeding Contract** - Combine NFTs to create new ones
-- **Staking NFTs** - Stake NFTs to earn rewards
-
-## 🎨 NFT Standards
-
-While Soroban doesn't have a single NFT standard yet, these examples follow best practices:
-
-### Core Functions
-
-```rust
-// Minting
-pub fn mint(env: Env, to: Address, token_id: u32) -> Result<(), Error>
-
-// Transfer
-pub fn transfer(env: Env, from: Address, to: Address, token_id: u32)
-
-// Ownership
-pub fn owner_of(env: Env, token_id: u32) -> Address
-
-// Balance
-pub fn balance_of(env: Env, owner: Address) -> u32
-```
-
-### Metadata
-
-```rust
-pub fn token_uri(env: Env, token_id: u32) -> String
-pub fn name(env: Env) -> String
-pub fn symbol(env: Env) -> String
-```
-
-## 📝 Metadata Best Practices
-
-### On-Chain vs Off-Chain
-
-**On-Chain Metadata** (stored in contract):
-
-- ✅ Immutable and verifiable
-- ✅ No external dependencies
-- ❌ Higher storage costs
-- ❌ Limited data size
-
-**Off-Chain Metadata** (IPFS or other storage):
-
-- ✅ Lower costs
-- ✅ Rich media support
-- ❌ Requires external service
-- ❌ Potential availability issues
-
-### Recommended Metadata Format
-
-```json
-{
-  "name": "My NFT #1",
-  "description": "A unique digital collectible",
-  "image": "ipfs://QmHash/image.png",
-  "attributes": [
-    {
-      "trait_type": "Rarity",
-      "value": "Legendary"
-    },
-    {
-      "trait_type": "Power",
-      "value": 100
-    }
-  ]
-}
-```
-
-## 🧪 Testing NFT Contracts
-
-```rust
-#[test]
-fn test_mint_and_ownership() {
-    let env = Env::default();
-    let contract_id = env.register_contract(None, NFTContract);
-    let client = NFTContractClient::new(&env, &contract_id);
-
-    let owner = Address::generate(&env);
-    let token_id = 1;
-
-    client.mint(&owner, &token_id);
-
-    assert_eq!(client.owner_of(&token_id), owner);
-    assert_eq!(client.balance_of(&owner), 1);
-}
-
-#[test]
-fn test_transfer() {
-    // Test NFT transfers
-}
-
-#[test]
-fn test_authorization() {
-    // Test only owner can transfer
-}
-```
-
-## 🎯 Use Cases
-
-### Digital Art
-
-- Unique artwork with provenance
-- Limited edition collections
-- Generative art projects
-
-### Gaming
-
-- In-game items and characters
-- Achievement badges
-- Virtual land parcels
-
-### Identity
-
-- Digital credentials
-- Membership tokens
-- Certification badges
-
-### Real-World Assets
-
-- Property deeds
-- Event tickets
-- Supply chain tracking
-
-## 🔒 Security Considerations
-
-1. **Prevent Unauthorized Minting**
-
-   ```rust
-   // Only admin can mint
-   admin.require_auth();
-   ```
-
-2. **Safe Transfers**
-
-   ```rust
-   // Verify ownership before transfer
-   let current_owner = get_owner(&token_id);
-   current_owner.require_auth();
-   ```
-
-3. **Prevent Double Minting**
-
-   ```rust
-   // Check token doesn't exist
-   if has_token(&token_id) {
-       panic!("Token already exists");
-   }
-   ```
-
-4. **Metadata Immutability**
-   - Consider making metadata immutable after minting
-   - Or implement clear rules for updates
-
-## 📚 Additional Resources
-
-- [NFT Best Practices](https://developers.stellar.org/docs/smart-contracts/nfts)
-- [IPFS Integration](https://docs.ipfs.tech/)
-- [Metadata Standards](https://docs.opensea.io/docs/metadata-standards)
-
-## 🤝 Contributing
-
-Have an NFT pattern to share? See [CONTRIBUTING.md](../../CONTRIBUTING.md)
+All examples are production-quality, fully tested, and emit structured events. They build on each other in sequence; start with `01` if you are new to NFTs on Soroban.
 
 ---
 
-**Build the next generation of digital collectibles on Stellar!**
+## Examples
+
+| # | Directory | Pattern | Difficulty |
+|---|-----------|---------|------------|
+| 01 | [basic-nft](./01-basic-nft/) | Mintable NFT with authorization, enumeration, and approvals | Beginner |
+| 02 | [nft-metadata](./02-nft-metadata/) | On-chain metadata struct, `token_uri` fallback, IPFS-friendly | Beginner |
+| 03 | [nft-metadata-standards](./03-nft-metadata-standards/) | JSON-schema-compliant metadata, typed attribute system, URI validation | Intermediate |
+| 04 | [nft-marketplace](./04-nft-marketplace/) | Fixed-price listings, English auctions, bundles, royalties, trade history | Advanced |
+| 05 | [automatic-snapshot-triggers](./05-automatic-snapshot-triggers/) | Time-based & event-based ownership snapshots with pruning. **Cross-domain:** [`defi/14`](../defi/14-automatic-snapshot-triggers/), [`tokens/10`](../tokens/10-automatic-snapshot-triggers/), [`governance/07`](../governance/11-automatic-snapshot-triggers/) | Intermediate |
+
+---
+
+## Key Patterns
+
+### Ownership and Authorization (`03-authentication` basis)
+
+NFT ownership is stored as `Persistent` storage keyed on `token_id`. Every transfer or burn calls `require_auth()` on the current owner:
+
+```rust
+pub fn transfer(env: Env, from: Address, to: Address, token_id: u32) -> Result<(), NftError> {
+    from.require_auth();
+    let owner: Address = env.storage().persistent().get(&DataKey::Owner(token_id))
+        .ok_or(NftError::TokenNotFound)?;
+    if owner != from {
+        return Err(NftError::NotOwner);
+    }
+    env.storage().persistent().set(&DataKey::Owner(token_id), &to);
+    // emit Transfer event
+    Ok(())
+}
+```
+
+### Approval Pattern
+
+Single-token approvals (`approve`) and operator approvals (`set_approval_for_all`) mirror ERC-721's delegation model:
+
+```rust
+DataKey::Approved(token_id)            // single-token delegate — cleared on transfer
+DataKey::ApproveAll(owner, operator)   // blanket operator approval
+```
+
+`transfer_from` checks both in order: single approval first, then operator approval.
+
+### Metadata Storage Strategy
+
+| Approach | Example | Trade-off |
+|----------|---------|-----------|
+| URI only (off-chain) | `02-nft-metadata` | Cheapest; metadata is mutable off-chain |
+| Full on-chain struct | `03-nft-metadata-standards` | Immutable, verifiable; higher storage cost |
+| Hybrid (base URI + per-token override) | `02-nft-metadata` | Flexible; base URI for bulk, override for exceptions |
+
+### Event Topics (`04-events` basis)
+
+All NFT events follow a `(action, "nft", token_id)` topic layout for indexer-friendly filtering:
+
+```rust
+// From 01-basic-nft
+env.events().publish(
+    (symbol_short!("transfer"), symbol_short!("nft")),
+    (from, to, token_id),
+);
+
+// From 04-nft-marketplace
+env.events().publish(
+    (symbol_short!("sale"), symbol_short!("market"), listing_id),
+    (buyer, seller, amount, royalty_paid),
+);
+```
+
+### Storage Tiers
+
+| Data | Tier | Why |
+|------|------|-----|
+| Collection name, symbol, admin, supply | `Instance` | Contract-level metadata; cheap to bundle-read |
+| Owner per token, balance per address | `Persistent` | Must survive ledger expiry; TTL should be extended on every write |
+| Approvals (single-token and operator) | `Persistent` | Must outlive the transaction that set them |
+
+---
+
+## Quick Start
+
+```bash
+# Run from the beginning — basic NFT
+cd examples/nfts/01-basic-nft
+cargo test
+
+# Jump straight to the marketplace
+cd examples/nfts/04-nft-marketplace
+cargo test
+
+# Build all NFT examples as WASM
+cargo build -p basic-nft -p nft-metadata-v2 -p nft-metadata-standards -p nft-marketplace \
+    --target wasm32-unknown-unknown --release
+```
+
+---
+
+## Security Notes
+
+- **Token existence checks**: Always verify a token exists (non-`None` owner) before acting on it. Return a typed error, not a panic.
+- **Approval expiry**: `03-nft-metadata-standards` includes per-token approval expiry via ledger sequence. Without expiry, stale approvals can be exercised indefinitely.
+- **Royalty enforcement**: Royalties are enforced by the marketplace contract only. Peer-to-peer transfers via the NFT contract bypass any royalty logic.
+- **Swap-remove integrity**: The `01-basic-nft` enumeration relies on a swap-remove invariant. Never write a `remove_token_from_owner` implementation that leaves gaps in the index array.
+- **Bundle atomicity**: In `04-nft-marketplace`, all NFTs in a bundle must transfer successfully. A partial transfer should revert the entire transaction.
+
+For a full guide see [docs/nft-patterns.md](../../docs/nft-patterns.md) and [docs/security-best-practices.md](../../docs/security-best-practices.md).

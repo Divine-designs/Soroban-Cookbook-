@@ -1,11 +1,47 @@
-#![no_std]
+#![cfg_attr(target_family = "wasm", no_std)]
+#![allow(deprecated)]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Bytes, Env, Symbol};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, Symbol,
+};
 
-/// Minimum delay (in seconds) that must pass before execution
-const MIN_DELAY: u64 = 60;
-/// Maximum delay (in seconds) allowed when queuing
-const MAX_DELAY: u64 = 86_400; // 24 hours
+/// Default minimum delay (in seconds) that must pass before execution
+const DEFAULT_MIN_DELAY: u64 = 60;
+/// Default maximum delay (in seconds) allowed when queuing
+const DEFAULT_MAX_DELAY: u64 = 86_400; // 24 hours
+/// Absolute bounds for delay configuration
+const ABSOLUTE_MIN_DELAY: u64 = 30;
+const ABSOLUTE_MAX_DELAY: u64 = 604_800; // 7 days
+
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+
+/// Payload for an admin-action event.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminActionEventData {
+    /// Identifier of the specific action performed.
+    pub action: Symbol,
+    /// Timestamp when the action was executed.
+    pub timestamp: u64,
+}
+
+/// Payload for an audit-trail event.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AuditTrailEventData {
+    /// Free-form description or reference tag.
+    pub details: Symbol,
+    /// Ledger timestamp at emission time.
+    pub timestamp: u64,
+}
+
+/// Namespace symbol used as the first topic of every event this contract emits.
+const CONTRACT_NS: Symbol = symbol_short!("timelock");
+/// Naming convention: `snake_case` action names in topic[1].
+const ACTION_ADMIN: Symbol = symbol_short!("admin");
+const ACTION_AUDIT: Symbol = symbol_short!("audit");
 
 #[contracttype]
 pub enum DataKey {
@@ -13,11 +49,17 @@ pub enum DataKey {
     Operation(Bytes),
     /// The admin who can queue/cancel/execute
     Admin,
+    /// Current minimum delay setting
+    MinDelay,
+    /// Current maximum delay setting
+    MaxDelay,
+    /// Emergency pause state
+    Paused,
 }
 
 /// Possible states of an operation
 #[contracttype]
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OperationState {
     /// Not found in storage
     Unknown,
@@ -39,7 +81,55 @@ impl TimelockContract {
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
         }
+        admin.require_auth();
+
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::MinDelay, &DEFAULT_MIN_DELAY);
+        env.storage()
+            .instance()
+            .set(&DataKey::MaxDelay, &DEFAULT_MAX_DELAY);
+        env.storage().instance().set(&DataKey::Paused, &false);
+
+        // Audit trail for initialization
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin),
+            AuditTrailEventData {
+                details: symbol_short!("init"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+    }
+
+    /// Return the current admin address.
+    pub fn admin(env: Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Not initialized")
+    }
+
+    /// Set a new admin address.
+    ///
+    /// Emits an audit event on success.
+    pub fn set_admin(env: Env, new_admin: Address) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Not initialized");
+        admin.require_auth();
+
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
+
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin, new_admin),
+            AuditTrailEventData {
+                details: symbol_short!("set_admin"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
     }
 
     /// Queue an operation for delayed execution.
@@ -56,7 +146,27 @@ impl TimelockContract {
             .expect("Not initialized");
         admin.require_auth();
 
-        if !(MIN_DELAY..=MAX_DELAY).contains(&delay) {
+        let paused: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false);
+        if paused {
+            panic!("Contract is paused");
+        }
+
+        let min_delay: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MinDelay)
+            .unwrap_or(DEFAULT_MIN_DELAY);
+        let max_delay: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MaxDelay)
+            .unwrap_or(DEFAULT_MAX_DELAY);
+
+        if !(min_delay..=max_delay).contains(&delay) {
             panic!("Delay out of range");
         }
 
@@ -71,8 +181,14 @@ impl TimelockContract {
         // Without this, the entry could expire before execution time.
         env.storage().persistent().extend_ttl(&key, 17_280, 120_960);
 
-        env.events()
-            .publish((Symbol::new(&env, "queued"),), (operation_id, execute_at));
+        // Consistent event emission
+        env.events().publish(
+            (CONTRACT_NS, ACTION_ADMIN, admin, operation_id),
+            AdminActionEventData {
+                action: symbol_short!("queue"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
     }
 
     /// Execute a queued operation after its delay has passed.
@@ -86,6 +202,15 @@ impl TimelockContract {
             .get(&DataKey::Admin)
             .expect("Not initialized");
         admin.require_auth();
+
+        let paused: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false);
+        if paused {
+            panic!("Contract is paused");
+        }
 
         let key = DataKey::Operation(operation_id.clone());
         let execute_at: u64 = env
@@ -102,8 +227,14 @@ impl TimelockContract {
         // Remove so it cannot be replayed
         env.storage().persistent().remove(&key);
 
-        env.events()
-            .publish((Symbol::new(&env, "executed"),), (operation_id, now));
+        // Consistent event emission
+        env.events().publish(
+            (CONTRACT_NS, ACTION_ADMIN, admin, operation_id),
+            AdminActionEventData {
+                action: symbol_short!("execute"),
+                timestamp: now,
+            },
+        );
     }
 
     /// Cancel a queued operation before it is executed.
@@ -124,8 +255,14 @@ impl TimelockContract {
 
         env.storage().persistent().remove(&key);
 
-        env.events()
-            .publish((Symbol::new(&env, "cancelled"),), operation_id);
+        // Consistent event emission
+        env.events().publish(
+            (CONTRACT_NS, ACTION_ADMIN, admin, operation_id),
+            AdminActionEventData {
+                action: symbol_short!("cancel"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
     }
 
     /// Return the scheduled execution timestamp for an operation, or 0 if not queued.
@@ -147,6 +284,79 @@ impl TimelockContract {
                 }
             }
         }
+    }
+
+    /// Update the delay bounds within absolute limits.
+    pub fn update_delay_bounds(env: Env, min_delay: u64, max_delay: u64) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Not initialized");
+        admin.require_auth();
+
+        if min_delay < ABSOLUTE_MIN_DELAY || max_delay > ABSOLUTE_MAX_DELAY || min_delay > max_delay
+        {
+            panic!("Invalid delay bounds");
+        }
+
+        env.storage().instance().set(&DataKey::MinDelay, &min_delay);
+        env.storage().instance().set(&DataKey::MaxDelay, &max_delay);
+
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin),
+            AuditTrailEventData {
+                details: symbol_short!("bounds"),
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+    }
+
+    /// Emergency pause to halt all operations.
+    pub fn set_pause(env: Env, paused: bool) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Not initialized");
+        admin.require_auth();
+
+        env.storage().instance().set(&DataKey::Paused, &paused);
+
+        env.events().publish(
+            (CONTRACT_NS, ACTION_AUDIT, admin),
+            AuditTrailEventData {
+                details: if paused {
+                    symbol_short!("pause")
+                } else {
+                    symbol_short!("unpause")
+                },
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+    }
+
+    /// Get current delay bounds.
+    pub fn get_delay_bounds(env: Env) -> (u64, u64) {
+        let min_delay: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MinDelay)
+            .unwrap_or(DEFAULT_MIN_DELAY);
+        let max_delay: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MaxDelay)
+            .unwrap_or(DEFAULT_MAX_DELAY);
+        (min_delay, max_delay)
+    }
+
+    /// Get pause state.
+    pub fn is_paused(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false)
     }
 }
 

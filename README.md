@@ -1,116 +1,205 @@
-# Soroban Cookbook
+# typos
 
-**A comprehensive guide to building smart contracts on Stellar with Soroban**
+> **Source code spell checker**
 
-[![CI](https://github.com/Soroban-Cookbook/Soroban-Cookbook/actions/workflows/test.yml/badge.svg)](https://github.com/Soroban-Cookbook/Soroban-Cookbook/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/Soroban-Cookbook/Soroban-Cookbook/branch/main/graph/badge.svg)](https://codecov.io/gh/Soroban-Cookbook/Soroban-Cookbook)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Finds and corrects spelling mistakes among source code:
+- Fast enough to run on monorepos
+- Low false positives so you can run on PRs
 
-## 📖 About
+![Screenshot](./docs/screenshot.png)
 
-The Soroban Cookbook is a developer's guide to building smart contracts on the Stellar network using Soroban. This repository provides clear, well-documented examples and practical patterns for developers at every level—from your first "Hello World" contract to complex DeFi protocols.
+[![codecov](https://codecov.io/gh/crate-ci/typos/branch/master/graph/badge.svg)](https://codecov.io/gh/crate-ci/typos)
+[![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
+![License](https://img.shields.io/crates/l/typos.svg)
+[![Crates Status](https://img.shields.io/crates/v/typos.svg)][Crates.io]
 
-## 🎯 What You'll Find Here
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE)
 
-### 📚 Examples by Difficulty
+## Documentation
 
-- **[Basics](./examples/basics/)** - Core concepts: storage, auth, events, and data types
-- **[Intermediate](./examples/intermediate/)** - Tokens, NFTs, multi-contract interactions
-- **[Advanced](./examples/advanced/)** - DeFi protocols, governance systems, cross-chain patterns
+- [Installation](#install)
+- [Getting Started](#getting-started)
+  - [False Positives](#false-positives)
+  - [Integrations](#integrations)
+    - [GitHub Action](docs/github-action.md)
+    - [pre-commit](docs/pre-commit.md)
+    - [Custom](#custom)
+  - [Debugging](#debugging)
+- [Reference](docs/reference.md)
+- [FAQ](#faq)
+- [Comparison with other spell checkers](docs/comparison.md)
+- [Projects using typos](https://github.com/crate-ci/typos/wiki)
+- [Benchmarks](benchsuite/runs)
+- [Design](docs/design.md)
+- [Contribute](CONTRIBUTING.md)
+- [CHANGELOG](CHANGELOG.md)
 
-### 🏗️ Examples by Use Case
+## Install
 
-- **[DeFi](./examples/defi/)** - AMMs, lending, vaults, escrow, and yield protocols
-- **[NFTs](./examples/nfts/)** - Minting, marketplaces, and metadata standards
-- **[Governance](./examples/governance/)** - DAOs, voting systems, and proposals
-- **[Tokens](./examples/tokens/)** - Custom tokens, wrappers, and token standards
+[Download](https://github.com/crate-ci/typos/releases) a pre-built binary
+(installable via [gh-install](https://github.com/crate-ci/gh-install)).
 
-### 📝 Comprehensive Guides
-
-- **[Getting Started](./guides/getting-started.md)** - Set up your development environment
-- **[Your First Contract](./guides/first-contract.md)** - Write, test, and deploy
-- **[Testing Guide](./guides/testing.md)** - Unit tests, integration tests, and best practices
-- **[Deployment Guide](./guides/deployment.md)** - Deploy to testnet and mainnet
-- **[Migrating from Ethereum](./guides/ethereum-to-soroban.md)** - Solidity → Rust patterns
-
-## 🚀 Quick Start
-
+Or use rust to install:
 ```bash
-# Clone the repository
-git clone https://github.com/Soroban-Cookbook/Soroban-Cookbook.git
-cd Soroban-Cookbook
-
-# Install Rust and Soroban CLI (if not already installed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-cargo install --locked soroban-cli
-
-# Try a basic example
-cd examples/basics/01-hello-world
-cargo test
-soroban contract build
-
-# Deploy to testnet
-soroban contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/hello_world.wasm \
-  --network testnet
+cargo install typos-cli
 ```
 
-## 📂 Repository Structure
-
-```
-Soroban-Cookbook/
-├── examples/           # Smart contract examples
-│   ├── basics/        # Beginner-friendly fundamentals
-│   ├── intermediate/  # Common patterns and use cases
-│   ├── advanced/      # Complex systems and protocols
-│   ├── defi/          # DeFi-specific examples
-│   ├── nfts/          # NFT implementations
-│   ├── governance/    # DAO and voting systems
-│   └── tokens/        # Token standards and patterns
-├── guides/            # Step-by-step tutorials
-├── docs/              # Reference documentation
-├── scripts/           # Deployment and testing utilities
-└── .github/           # CI/CD and templates
+Or use [Homebrew](https://brew.sh/) to install:
+```bash
+brew install typos-cli
 ```
 
-## 🛠️ Technical Standards
+Or use [Conda](https://conda.io/) to install:
+```bash
+conda install typos
+```
 
-Every example in this cookbook:
+Or use [Pacman](https://wiki.archlinux.org/title/pacman) to install:
+```
+sudo pacman -S typos
+```
 
-- ✅ Compiles with the latest stable Soroban SDK
-- ✅ Includes comprehensive unit and integration tests
-- ✅ Features inline documentation explaining key concepts
-- ✅ Provides deployment scripts for testnet/mainnet
-- ✅ Follows Rust and Soroban best practices
-- ✅ Passes automated CI/CD checks
+## Getting Started
 
-## 🤝 Contributing
+Most commonly, you'll either want to see what typos are available with
+```bash
+typos
+```
 
-We welcome contributions from the community! Whether you're fixing a typo, improving documentation, or adding a new example, your help makes this resource better for everyone.
+Or have them fixed
+```bash
+typos --write-changes
+typos -w
+```
+If there is any ambiguity (multiple possible corrections), `typos` will just report it to the user and move on.
 
-**Ways to contribute:**
+### False-positives
 
-- 📝 Add new contract examples or patterns
-- 📖 Improve documentation and guides
-- 🐛 Report bugs or suggest improvements
-- ✅ Review pull requests
-- 🌍 Translate content to other languages
+Sometimes, what looks like a typo is intentional, like with people's names, acronyms, or localized content.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+To mark a word or an identifier (grouping of words) as valid, add it your [`_typos.toml`](docs/reference.md) by declaring itself as the valid spelling:
+```toml
+[default]
+extend-ignore-identifiers-re = [
+    # *sigh* this just isn't worth the cost of fixing
+    "AttributeID.*Supress.*",
+]
 
-## 📚 Additional Resources
+[default.extend-identifiers]
+# *sigh* this just isn't worth the cost of fixing
+AttributeIDSupressMenu = "AttributeIDSupressMenu"
 
-- [Soroban Documentation](https://developers.stellar.org/docs/smart-contracts)
-- [Stellar Developer Portal](https://developers.stellar.org)
-- [Soroban Rust SDK](https://github.com/stellar/rs-soroban-sdk)
-- [Stellar Community Discord](https://discord.gg/stellardev)
+[default.extend-words]
+# Don't correct the surname "Teh"
+teh = "teh"
+```
 
-## 📄 License
+For cases like localized content, you can disable spell checking of file contents while still checking the file name:
+```toml
+[type.po]
+extend-glob = ["*.po"]
+check-file = false
+```
+(run `typos --type-list` to see configured file types)
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+If you need some more flexibility, you can completely exclude some files from consideration:
+```toml
+[files]
+extend-exclude = ["localized/*.po"]
+```
 
----
+### Integrations
 
-**Built by the community • Powered by Stellar • Written in Rust**
+- [GitHub Actions](docs/github-action.md)
+- [pre-commit](docs/pre-commit.md)
+- [🐊Putout Processor](https://github.com/putoutjs/putout-processor-typos)
+- [Visual Studio Code](https://github.com/tekumara/typos-vscode)
+- [typos-lsp (Language Server Protocol server)](https://github.com/tekumara/typos-vscode)
 
-_Have a suggestion or found an issue? [Open an issue](https://github.com/Soroban-Cookbook/Soroban-Cookbook/issues/new)_
+#### Custom
+
+`typos` provides several building blocks for custom native integrations
+- `-` reads from `stdin`, `--write-changes` will be written to `stdout`
+- `--diff` to provide a diff
+- `--format json` to get jsonlines with exit code 0 on no errors, code 2 on typos, anything else is an error.
+
+Examples:
+```bash
+# Read file from stdin, write corrected version to stdout
+typos - --write-changes
+# Creates a diff of what would change
+typos dir/file --diff
+# Fully programmatic control
+typos dir/file --format json
+```
+
+### Debugging
+
+You can see what the effective config looks like by running
+```bash
+typos --dump-config -
+```
+
+You can then see how typos is processing your project with
+```bash
+typos --files
+typos --identifiers
+typos --words
+```
+
+If you need to dig in more, you can enable debug logging with `-v`
+
+## FAQ
+
+### Why was ... not corrected?
+
+**Does the file show up in `typos --files`?**
+If not, check your config with `typos --dump-config -`.
+The `[files]` table controls how we walk files.
+If you are using `files.extend-exclude`,
+are you running into [#593](https://github.com/crate-ci/typos/issues/593)?
+If you are using `files.ignore-vcs = true`,
+is the file in your `.gitignore` but git tracks it anyways?
+Prefer allowing the file explicitly (see [#909](https://github.com/crate-ci/typos/issues/909)).
+
+**Does the identifier show up in `typos --identifiers` or the word show up in `typos --words`?**
+If not, it might be subject to one of typos' heuristics for
+detecting non-words (like hashes) or
+unambiguous words (like words after a `\` escape).
+
+### 📊 Community Health & Metrics
+We track community health transparently so everyone can see how the project is growing:
+
+| Resource | Description |
+|---|---|
+| [Project Showcase](./SHOWCASE.md) | 10+ real production Stellar/Soroban projects built with the cookbook, with case studies and tracking |
+| [Ecosystem Partnerships](./docs/ecosystem-partnerships.md) | Partner projects, active collaborations, joint content, and the reciprocal cross-promotion model |
+| [Featured Projects](./docs/featured-projects.md) | First 5 projects featured, each with a case study, runnable demo, developer interview, and promotion plan |
+| [Project Templates](./templates/) | Full-stack starter templates for Fungible Token, NFT Marketplace, and DAO dApps |
+| [Community Dashboard](./docs/community-dashboard.md) | Live rolling metrics — stars, PRs, response times, satisfaction |
+| [Metric Definitions](./docs/community-metrics.md) | What we measure, how we collect it, and alert thresholds |
+| [Recognition System](./docs/recognition-system.md) | How contribution activity earns contributor tier badges |
+| [Iterable Mapping](./examples/intermediate/iterable-mapping/README.md) | Canonical enumeration pattern for key-value maps using a side list, with `keys(page)` and `values(page)` pagination helpers |
+
+The dashboard is updated automatically every Monday by a GitHub Actions workflow.
+
+
+## Additional Resources
+If it is showing up, likely `typos` doesn't know about it yet.
+
+`typos` maintains a list of known typo corrections to keep the false positive
+count low so it can safely run unassisted.
+
+This is in contrast to most spell checking UIs people use where there is a
+known list of valid words.  In this case, the spell checker tries to guess your
+intent by finding the closest-looking word.  It then has a gauge for when a
+word isn't close enough and assumes you know best.  The user has the
+opportunity to verify these corrections and explicitly allow or reject them.
+
+For more on the trade offs of these approaches, see [Design](docs/design.md).
+
+- To correct it locally, see also our [False Positives documentation](#false-positives).
+- To contribute your correction, see [Contribute](CONTRIBUTING.md)
+
+[Crates.io]: https://crates.io/crates/typos-cli
+[Documentation]: https://docs.rs/typos
