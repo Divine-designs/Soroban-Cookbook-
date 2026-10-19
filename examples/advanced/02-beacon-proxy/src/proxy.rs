@@ -49,6 +49,7 @@ impl ProxyContract {
     /// * `admin` - address that can call `set_beacon`
     /// * `beacon` - address of the Beacon contract this proxy will consult
     pub fn init(env: Env, admin: Address, beacon: Address) {
+        admin.require_auth();
         if env.storage().persistent().has(&BEACON_KEY) {
             panic!("Already initialized");
         }
