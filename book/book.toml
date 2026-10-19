@@ -28,3 +28,11 @@ boost-paragraph = 1
 expand = true
 heading-split-level = 3
 copy-js = true
+
+# Privacy-respecting analytics (Issue #927)
+# The script tracks page views, search queries, and user paths without cookies
+# or PII.  Set window.SOROBAN_ANALYTICS_ENDPOINT in a theme override to enable
+# beacon collection; without an endpoint the script silently no-ops.
+# See: docs/documentation-metrics.md for dashboard and metric definitions.
+[output.html.additional-js]
+js = ["analytics.js"]

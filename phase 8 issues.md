@@ -1,8 +1,8 @@
 # Phase 8: Community & Ecosystem -
 
 **Phase Status:** 📋 PLANNED (Ongoing)  
-**Completion:** 6% (3/50)
-**Last Audit Date:** July 29, 2026
+**Completion:** 8% (4/50)
+**Last Audit Date:** October 19, 2026
 
 Community and ecosystem initiatives — no in-repo deliverables yet.
 
@@ -64,14 +64,34 @@ Community and ecosystem initiatives — no in-repo deliverables yet.
   - [x] Links and documentation updated in `CONTRIBUTING.md`
   - [x] Phase issue status updated for manual verification
 
+## Metrics & Analytics
+
+### Issue #927: Track Documentation Metrics
+
+- **Priority:** Medium
+- **Status:** ✅ Complete
+
+- **Current state:** Deliverables created in-repo (October 2026).
+- **Implementation hints:** Analytics instrumentation for mdBook and webapp; dashboard and workflow for automated collection; metric definitions updated.
+- **Verification:** All acceptance criteria met — see deliverables below.
+- **Scope:** M
+- **Description:** Monitor documentation usage across mdBook and webapp surfaces.
+- **Acceptance Criteria:**
+  - ✅ Page views tracked — [`book/analytics.js`](./book/analytics.js) tracks page views on mdBook; [`webapp/src/lib/analytics.ts`](./webapp/src/lib/analytics.ts) tracks page views on the Next.js webapp. Both use privacy-respecting `sendBeacon` with no cookies or PII.
+  - ✅ Search queries analyzed — mdBook script instruments the `#searchbar` input; webapp module tracks search queries via `trackSearch()`. The [`documentation-metrics.yml`](./.github/workflows/documentation-metrics.yml) workflow parses search events for unique terms, top searches, and zero-result queries.
+  - ✅ Popular content identified — Dashboard includes top 10 pages (weekly) and top 20 pages (monthly) tables, populated from GitHub Traffic API and analytics event logs.
+  - ✅ User paths tracked — Both analytics scripts record user paths in `sessionStorage` (per-tab, non-persistent). The workflow computes entry pages, exit pages, average path length, and top 3-page flows.
+  - ✅ Dashboard — [`docs/documentation-metrics.md`](./docs/documentation-metrics.md) provides page view tables, search query analysis, popular content rankings, user path analysis, rolling weekly data, monthly trends, zero-result search terms, and mdBook vs webapp comparison.
+  - ✅ Verification — Metric definitions added to [`docs/community-metrics.md`](./docs/community-metrics.md) § 3.6 (14 documentation usage metrics). Links added to [`README.md`](./README.md) and [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
 ## Summary
 
-**Total Issues Created:** 70 (Issues #379-#534, #629)
-**Completed:** 3
+**Total Issues Created:** 70 (Issues #379-#534, #629, #927)
+**Completed:** 4
 **In Progress:** 0  
 **Planned:** 63
 
-**Phase 8 Status:** 📋 **6% COMPLETE (Ongoing)**
+**Phase 8 Status:** 📋 **8% COMPLETE (Ongoing)**
 
 Community categories:
 

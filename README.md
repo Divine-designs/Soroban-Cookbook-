@@ -174,11 +174,12 @@ We track community health transparently so everyone can see how the project is g
 |---|---|
 | [Project Templates](./templates/) | Full-stack starter templates for Fungible Token, NFT Marketplace, and DAO dApps |
 | [Community Dashboard](./docs/community-dashboard.md) | Live rolling metrics — stars, PRs, response times, satisfaction |
+| [Documentation Metrics](./docs/documentation-metrics.md) | Page views, search queries, popular content, and user path analysis |
 | [Metric Definitions](./docs/community-metrics.md) | What we measure, how we collect it, and alert thresholds |
 | [Recognition System](./docs/recognition-system.md) | How contribution activity earns contributor tier badges |
 | [Iterable Mapping](./docs/iterable-mapping.md) | Enumeration pattern for key-value maps using a side list, with `keys(page)` and `values(page)` pagination helpers |
 
-The dashboard is updated automatically every Monday by a GitHub Actions workflow.
+The dashboards are updated automatically every Monday by GitHub Actions workflows.
 
 
 ## Additional Resources
