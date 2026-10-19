@@ -191,6 +191,7 @@ impl VaultContract {
     ///
     /// Can only be called once.
     pub fn initialize(env: Env, admin: Address, initial_strategy: StrategyType) {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
         }
