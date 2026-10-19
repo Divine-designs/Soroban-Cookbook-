@@ -19,6 +19,10 @@ ADRs are immutable once accepted. If a decision changes, a new ADR is written to
 | ADR | Title | Status |
 | --- | ----- | ------ |
 | [ADR-001](./001-record-architecture-decisions.md) | Record Architecture Decisions | Accepted |
+| [ADR-002](./002-rust-version.md) | Rust Version | Accepted |
+| [ADR-003](./003-soroban-sdk-version.md) | Soroban SDK Version | Accepted |
+| [ADR-004](./004-testing-framework.md) | Testing Framework | Accepted |
+| [ADR-005](./005-documentation-platform.md) | Documentation Platform | Accepted |
 
 ## Creating a New ADR
 

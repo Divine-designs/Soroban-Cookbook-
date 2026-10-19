@@ -22,6 +22,8 @@ shaped by the teams actually shipping contracts. The full picture — partner
 projects, active collaborations, joint content, cross-promotion, and how to join
 — lives in [docs/ecosystem-partnerships.md](./docs/ecosystem-partnerships.md).
 
+For information about our outreach to the Stellar Development Foundation, see [docs/stellar-foundation-contact.md](./docs/stellar-foundation-contact.md).
+
 **Current collaboration tracks:**
 
 | Collaboration | What it produces |
@@ -130,6 +132,17 @@ We provide three complete full-stack starter templates in the [`templates/`](./t
 - [🏛️ DAO Governance & Treasury dApp](./templates/dao-governance-dapp/)
 
 To contribute a new template or improve an existing one, check out the [Project Templates Guide](./docs/project-templates.md).
+
+---
+
+## Roadmap Input Process
+
+The Soroban Cookbook has a structured process for community members to propose additions to the project roadmap. See [docs/roadmap-input-process.md](./docs/roadmap-input-process.md) for:
+
+- How to submit roadmap proposals (GitHub Discussions, issues, community calls)
+- The review and triage process
+- How community votes work
+- The quarterly update cadence
 
 ---
 
