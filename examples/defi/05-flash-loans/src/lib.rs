@@ -28,6 +28,7 @@ pub struct FlashLoanContract;
 impl FlashLoanContract {
     /// Initialize the contract with an admin and fee in basis points (1/10000).
     pub fn init(env: Env, admin: Address, fee_bps: u32) {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("already initialized");
         }

@@ -44,6 +44,7 @@ pub enum PermitError {
     InsufficientBalance = 4,
     InsufficientAllowance = 5,
     ExpiredPermit = 6,
+    ArithmeticOverflow = 7,
 }
 
 #[contractimpl]
@@ -105,8 +106,13 @@ impl PermitPattern {
             return Err(PermitError::InsufficientBalance);
         }
 
+        let to_bal = read_balance(&env, &to);
+        let new_to_bal = to_bal
+            .checked_add(amount)
+            .ok_or(PermitError::ArithmeticOverflow)?;
+
         write_balance(&env, &from, from_bal - amount);
-        write_balance(&env, &to, read_balance(&env, &to) + amount);
+        write_balance(&env, &to, new_to_bal);
 
         PermitTransferEvent {
             from: from.clone(),
@@ -144,9 +150,14 @@ impl PermitPattern {
             return Err(PermitError::InsufficientBalance);
         }
 
+        let to_bal = read_balance(&env, &to);
+        let new_to_bal = to_bal
+            .checked_add(amount)
+            .ok_or(PermitError::ArithmeticOverflow)?;
+
         write_allowance(&env, &owner, &spender, allowance - amount);
         write_balance(&env, &owner, owner_bal - amount);
-        write_balance(&env, &to, read_balance(&env, &to) + amount);
+        write_balance(&env, &to, new_to_bal);
 
         PermitTransferEvent {
             from: owner.clone(),

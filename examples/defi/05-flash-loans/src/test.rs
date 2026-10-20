@@ -142,6 +142,7 @@ fn test_fail_insufficient_liquidity() {
 #[should_panic(expected = "amount must be positive")]
 fn test_fail_zero_amount() {
     let env = Env::default();
+    env.mock_all_auths();
     let (_, _, _, flash_loan_client, token_client, _) = setup_test(&env);
     let receiver_address = env.register(Receiver, ());
 
@@ -284,6 +285,17 @@ fn test_events_emitted() {
 #[should_panic(expected = "already initialized")]
 fn test_fail_double_init() {
     let env = Env::default();
+    env.mock_all_auths();
     let (admin, _, _, flash_loan_client, _, _) = setup_test(&env);
     flash_loan_client.init(&admin, &100);
+}
+
+#[test]
+fn test_fail_init_requires_admin_auth() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let flash_loan_address = env.register(FlashLoanContract, ());
+    let flash_loan_client = FlashLoanContractClient::new(&env, &flash_loan_address);
+
+    assert!(flash_loan_client.try_init(&admin, &50).is_err());
 }
