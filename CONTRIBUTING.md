@@ -200,6 +200,16 @@ and feeds the [Recognition System](./docs/recognition-system.md). You can:
 
 ## 🎯 Ways to Contribute
 
+## 📋 Submission Guidelines
+
+All contributions must follow these guidelines:
+
+1. **Test Coverage**: Every change touching contract logic requires test coverage (see [Testing Requirements](#-testing-requirements))
+2. **Code Style**: Run `cargo fmt --all -- --check` and `cargo clippy --tests --lib -- -D warnings` locally before opening a PR
+3. **Documentation**: Update relevant documentation when adding or modifying examples
+4. **Commits**: Use conventional commit messages (e.g., `feat:`, `fix:`, `docs:`)
+5. **PR Process**: Link related issues using `Closes #<issue-number>` in the PR description
+
 ## 🧪 Testing Requirements
 
 Every change that touches contract logic needs test coverage before it merges. This section covers the commands you need day-to-day; for testing patterns, fixtures, and best practices, see the [Testing Guide](./book/src/guides/testing.md) and [Testing Best Practices](./book/src/docs/testing-best-practices.md).
