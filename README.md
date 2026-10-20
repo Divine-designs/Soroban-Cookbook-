@@ -176,6 +176,7 @@ We track community health transparently so everyone can see how the project is g
 | [Ecosystem Partnerships](./docs/ecosystem-partnerships.md) | Partner projects, active collaborations, joint content, and the reciprocal cross-promotion model |
 | [Formal Partnership Proposal](./docs/formal-partnership-proposal.md) | Partnership qualification criteria, benefits, MOU agreement template, and onboarding roadmap |
 | [Featured Projects](./docs/featured-projects.md) | First 5 projects featured, each with a case study, runnable demo, developer interview, and promotion plan |
+| [First Workshop](./docs/workshop-plan.md) | Plan for the first Soroban workshop: agenda, registration, delivery, and follow-up materials |
 | [Project Templates](./templates/) | Full-stack starter templates for Fungible Token, NFT Marketplace, and DAO dApps |
 | [Community Dashboard](./docs/community-dashboard.md) | Live rolling metrics — stars, PRs, response times, satisfaction |
 | [Documentation Metrics](./docs/documentation-metrics.md) | Page views, search queries, popular content, and user path analysis |

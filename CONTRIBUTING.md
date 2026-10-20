@@ -124,6 +124,18 @@ The Soroban Cookbook runs monthly community calls to share progress, demo exampl
 
 To propose a topic, moderate a session, or improve the process, open an issue or pull request in this repository.
 
+## First Workshop
+
+We are planning a hands-on workshop, *Build Your First Soroban Contracts*, for
+developers new to Soroban. The plan covers the agenda (built on the basics and
+token examples in this repository), registration, delivery, and the follow-up
+checklist. The date and platform are announced in the plan once they are set.
+
+- [Workshop Plan](./docs/workshop-plan.md)
+
+To volunteer as a facilitator or helper, or to suggest a topic, open an issue or
+a pull request against the plan.
+
 ## Project Templates
 
 We provide three complete full-stack starter templates in the [`templates/`](./templates/) directory to help developers build and launch dApps rapidly:
@@ -153,6 +165,7 @@ The Soroban Cookbook has a structured process for community members to propose a
 - [Featured Projects](#featured-projects)
 - [Community Office Hours](#️-community-office-hours)
 - [Monthly Community Call Governance](#monthly-community-call-governance)
+- [First Workshop](#first-workshop)
 - [Ecosystem Partnerships](#ecosystem-partnerships)
 - [Grants Application Process](#grants-application-process)
 - [Project Templates](#project-templates)
