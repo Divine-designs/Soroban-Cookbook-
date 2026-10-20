@@ -14,6 +14,7 @@ preferred-dark-theme = "navy"
 site-url = "/Soroban-Cookbook/"
 git-repository-url = "https://github.com/Soroban-Cookbook/Soroban-Cookbook"
 edit-url-template = "https://github.com/Soroban-Cookbook/Soroban-Cookbook/edit/main/book/{path}"
+additional-js = ["theme/analytics.js"]
 
 [output.html.code]
 

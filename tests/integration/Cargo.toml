@@ -4,6 +4,18 @@ version.workspace = true
 edition.workspace = true
 publish = false
 
+[profile.test]
+opt-level = 0
+split-debuginfo = "packed"
+
+[[test]]
+name = "integration_tests"
+path = "integration_tests.rs"
+harness = true
+
+[lib]
+path = "lib.rs"
+
 [dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 soroban-validation = { path = "../../shared", package = "soroban-validation" }
