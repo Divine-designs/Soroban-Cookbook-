@@ -22,6 +22,14 @@
 
 - [Playground Infrastructure](./playground.md)
 
+## Interactive Tutorials
+
+- [Tutorial 1: Hello World](./guides/playground-tutorial-01-hello-world.md)
+- [Tutorial 2: Contract Storage](./guides/playground-tutorial-02-storage.md)
+- [Tutorial 3: Error Handling](./guides/playground-tutorial-03-error-handling.md)
+- [Tutorial 4: Authentication](./guides/playground-tutorial-04-authentication.md)
+- [Tutorial 5: Multi-Contract Interactions](./guides/playground-tutorial-05-multi-contract.md)
+
 # Examples
 
 - [All Examples Index](./examples-index.md)
