@@ -142,6 +142,7 @@
 - [Performance Benchmarks](./docs/benchmarks.md)
 - [Glossary](./docs/glossary.md)
 - [Translation Infrastructure](./docs/translation-infrastructure.md)
+- [Translation Workflow](./docs/translation-workflow.md)
 - [Common Patterns](./docs/common-patterns.md)
 - [Factory, Proxy, and Registry Patterns](./docs/cross-contract-patterns.md)
 - [Troubleshooting](./docs/troubleshooting.md)
