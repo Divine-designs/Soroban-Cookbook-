@@ -37,6 +37,7 @@ pub struct FarmingPoolContract;
 impl FarmingPoolContract {
     /// Initialize the contract with an admin address.
     pub fn initialize(env: Env, admin: Address) {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
         }

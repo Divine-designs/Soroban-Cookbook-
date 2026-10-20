@@ -65,6 +65,7 @@ pub struct PriceOracleContract;
 impl PriceOracleContract {
     /// Initialize the oracle with an admin.
     pub fn initialize(env: Env, admin: Address) -> Result<(), OracleError> {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(OracleError::AlreadyInitialized);
         }
