@@ -117,6 +117,10 @@
 - [08 Â· Multi-Token Balance Manager](./examples/tokens/08-multi-token-balance-manager.md)
 - [09 Â· Optimized Token Ops](./examples/tokens/09-optimized-token-ops.md)
 
+# Analytics
+
+- [Documentation Analytics](./docs/documentation-analytics.md)
+
 # API Reference
 
 - [Quick Reference](./docs/quick-reference.md)
