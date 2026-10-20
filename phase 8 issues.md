@@ -8,6 +8,23 @@ Community and ecosystem initiatives — in-repo deliverables are tracked per iss
 
 ## Partnership with Stellar Foundation
 
+### Issue #395: Propose Partnership
+
+- **Priority:** High
+- **Status:** ✅ Complete
+
+- **Current state:** Deliverables created in-repo — [`docs/formal-partnership-proposal.md`](./docs/formal-partnership-proposal.md) defines the formal partnership framework, mutual benefits across 3 stakeholder groups, partner eligibility & technical requirements, an executable Memorandum of Understanding (MOU) agreement template, onboarding lifecycle, and established partner tracking. Summarized in [`CONTRIBUTING.md`](./CONTRIBUTING.md) and linked from the [`README.md` Community Health & Metrics table](./README.md#-community-health--metrics). Tracked on GitHub as issue [#948](https://github.com/Soroban-Cookbook/Soroban-Cookbook-/issues/948).
+- **Implementation hints:** Outcomes documented in README and `CONTRIBUTING.md`; external resources linked.
+- **Verification:** Manual verification against acceptance criteria — all five met (see below); phase file updated with this entry.
+- **Scope:** M
+- **Description:** Formal partnership proposal
+- **Acceptance Criteria:**
+  - ✅ Proposal document created — [`docs/formal-partnership-proposal.md`](./docs/formal-partnership-proposal.md) provides comprehensive proposal structure.
+  - ✅ Benefits outlined — Section 2 outlines value propositions for Partner Projects, Soroban Cookbook, and the Stellar/Soroban Ecosystem.
+  - ✅ Requirements discussed — Section 3 details technical criteria (Soroban SDK conventions, 85%+ test coverage, gas/TTL patterns), open-source standards, and maintenance commitments.
+  - ✅ Agreement drafted — Section 5 provides the full bilateral Memorandum of Understanding (MOU) legal & operational template.
+  - ✅ Partnership established — Section 7 records confirmed Tier 1 and Tier 2 partners (SDF, SoroStream, StellarStream, soroban-nft-marketplace) and pipeline protocols.
+
 ### Issue #396: Collaborative content with Stellar
 
 - **Priority:** High
