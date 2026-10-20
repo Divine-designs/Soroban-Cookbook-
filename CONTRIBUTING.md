@@ -193,7 +193,9 @@ the impact of their work and maintainers can identify friction early.
 |---|---|
 | [Community Metrics](./docs/community-metrics.md) | Full metric definitions, targets, and alert thresholds |
 | [Community Dashboard](./docs/community-dashboard.md) | Rolling weekly data table + monthly narrative reports |
-| [Automated Workflow](./.github/workflows/community-metrics.yml) | GitHub Actions job that collects data every Monday |
+| [Documentation Metrics](./docs/documentation-metrics.md) | Page views, search queries, popular content, user paths |
+| [Automated Workflow](./.github/workflows/community-metrics.yml) | GitHub Actions job that collects community data every Monday |
+| [Docs Metrics Workflow](./.github/workflows/documentation-metrics.yml) | GitHub Actions job that collects docs usage data every Monday |
 
 ### What We Track
 
@@ -201,7 +203,20 @@ the impact of their work and maintainers can identify friction early.
 - **Engagement** — issue response time, PR review velocity, discussion activity
 - **Content Quality** — CI pass rate, test coverage, Clippy warnings
 - **Community Health** — bus factor, contributor retention, CoC incidents
-- **Documentation** — feedback submissions, satisfaction scores
+- **Documentation** — page views, search queries, popular content, user paths, feedback submissions, satisfaction scores
+
+### Documentation Analytics
+
+The project uses privacy-respecting analytics to understand how developers
+use the documentation:
+
+- **mdBook** — `book/analytics.js` tracks page views, search queries, and user paths
+- **Webapp** — `webapp/src/lib/analytics.ts` tracks page views and search queries
+
+Both scripts are cookie-free, PII-free, respect Do-Not-Track, and use
+`navigator.sendBeacon` for non-blocking data transmission. See the
+[privacy section](./docs/documentation-metrics.md#privacy--data-handling) of
+the documentation metrics dashboard for full details.
 
 ### How You Contribute to the Numbers
 
