@@ -8,6 +8,9 @@ src = "src"
 [build]
 build-dir = "book-output"
 
+[rust]
+edition = "2021"
+
 [output.html]
 default-theme = "rust"
 preferred-dark-theme = "navy"

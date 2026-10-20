@@ -217,6 +217,48 @@ jobs:
           fail_ci_if_error: false
           token: $ {{ secrets.CODECOV_TOKEN }}
 
+  doc-tests:
+    name: Documentation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install mdBook
+        run: |
+          MDBOOK_VERSION="0.4.40"
+          curl -sSL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C /usr/local/bin
+
+      - name: Build book
+        working-directory: book
+        run: mdbook build
+
+      - name: Run documentation tests
+        working-directory: book
+        run: |
+          set -o pipefail
+          mdbook test 2>&1 | tee doc-test-output.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Documentation tests failed. See failing snippets below."
+            # Surface failing code examples in the job log
+            grep -n -E "^(error|test .* FAILED|---- .* stdout ----)" doc-test-output.log || true
+            exit "$status"
+          fi
+
+      - name: Upload doc test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-test-output
+          path: book/doc-test-output.log
+          retention-days: 30
+
   spell-check:
     name: Spell Check
     runs-on: ubuntu-latest

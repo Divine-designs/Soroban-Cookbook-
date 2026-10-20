@@ -151,6 +151,7 @@ The Soroban Cookbook has a structured process for community members to propose a
 ## 📍 Table of Contents
 - [New Here? Start with Onboarding](#-new-here-start-with-onboarding)
 - [Featured Projects](#featured-projects)
+- [Community Office Hours](#️-community-office-hours)
 - [Monthly Community Call Governance](#monthly-community-call-governance)
 - [Ecosystem Partnerships](#ecosystem-partnerships)
 - [Grants Application Process](#grants-application-process)
@@ -224,6 +225,57 @@ All contributions must follow these guidelines:
 3. **Documentation**: Update relevant documentation when adding or modifying examples
 4. **Commits**: Use conventional commit messages (e.g., `feat:`, `fix:`, `docs:`)
 5. **PR Process**: Link related issues using `Closes #<issue-number>` in the PR description
+
+### 🗓️ Community Office Hours
+
+We run **regular office hours** so you can bring questions, get unblocked, and
+talk through contract design with maintainers and other contributors. Office
+hours complement the [monthly community call](#monthly-community-call-governance):
+the call is for demos and announcements, office hours are for open Q&A.
+
+**Schedule**
+
+- **Weekly**, every **Thursday at 16:00 UTC** (60 minutes).
+- No session on the week of the monthly community call — join the call instead.
+- The next session date is always posted in the [README](./README.md#community-office-hours)
+  and in GitHub Discussions under the `Office Hours` category.
+
+**Platform**
+
+- Hosted on **Discord** in the `#soroban` channel on
+  [Stellar Discord](https://discord.gg/stellardev), with a fallback video room
+  link posted in the Discussion thread before each session.
+- No registration required; drop in for any part of the hour.
+
+**Promotion**
+
+- Announced in GitHub Discussions and the `#soroban` Discord channel at least
+  48 hours ahead, with the agenda and any pre-submitted questions.
+- Included in the monthly call recap and the [Community Dashboard](./docs/community-dashboard.md).
+
+**Q&A format**
+
+1. **Pre-submitted questions** — post in the Discussion thread or comment on the
+   tracking issue; these are answered first.
+2. **Live questions** — raise your hand in the channel; the moderator queues them.
+3. **Deep dives** — anything needing more than ~5 minutes is moved to a follow-up
+   issue or a dedicated pairing session.
+
+See the [Q&A Process](./GOVERNANCE/monthly-call-qa-process.md) for the moderation
+conventions we reuse.
+
+**Recording and notes**
+
+- Sessions are **not recorded by default** to keep the space open for candid
+  questions; if a session is recorded, everyone is told at the start.
+- Written notes, answered questions, and links are published after each session
+  in the `Office Hours` Discussion category and summarized in the
+  [Community Dashboard](./docs/community-dashboard.md).
+- Action items become GitHub issues tagged `office-hours`.
+
+**Want to host or propose a topic?** Open an issue describing the topic and
+which cookbook pages it relates to, or volunteer as moderator in the Discussion
+thread.
 
 ## 🧪 Testing Requirements
 

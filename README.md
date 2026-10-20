@@ -184,6 +184,21 @@ We track community health transparently so everyone can see how the project is g
 
 The dashboard is updated automatically every Monday by a GitHub Actions workflow.
 
+### 🗣️ Office Hours
+
+Recurring community office hours for questions, troubleshooting, and pairing on contributions.
+
+| Detail | Info |
+|---|---|
+| **Schedule** | Biweekly, every other Thursday at 16:00 UTC (60 minutes) |
+| **Platform** | Stellar Discord voice channel (join link posted in [GitHub Discussions](https://github.com/crate-ci/typos/discussions)) |
+| **Calendar** | [Subscribe to the office hours calendar invite](https://github.com/crate-ci/typos/wiki/Office-Hours) |
+| **Promotion** | Announced via GitHub Discussions, Discord, and social channels one week ahead |
+| **Format** | Short topic/agenda intro, open Q&A, and a rotating deep-dive topic each session |
+| **Notes & Recordings** | [Office Hours wiki](https://github.com/crate-ci/typos/wiki/Office-Hours) — agenda, notes, and video archive |
+
+Have a question you'd like covered? Open a thread in [GitHub Discussions](https://github.com/crate-ci/typos/discussions) or drop it in the agenda before the session.
+
 
 ## Additional Resources
 If it is showing up, likely `typos` doesn't know about it yet.

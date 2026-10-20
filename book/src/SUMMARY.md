@@ -138,6 +138,7 @@
 - [Featured Projects](./../docs/featured-projects.md)
 - [Common Pitfalls](./docs/common-pitfalls.md)
 - [Style Guide](./docs/style-guide.md)
+- [Documentation Style Guide](./docs/style-guide.md)
 - [Performance Benchmarks](./docs/benchmarks.md)
 - [Glossary](./docs/glossary.md)
 - [Translation Infrastructure](./docs/translation-infrastructure.md)
