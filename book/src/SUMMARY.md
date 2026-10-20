@@ -113,6 +113,7 @@
 
 - [Quick Reference](./docs/quick-reference.md)
 - [Best Practices](./docs/best-practices.md)
+- [Code Review Checklist](./docs/review-checklist.md)
 - [Testing Best Practices](./docs/testing-best-practices.md)
 - [Testing Pitfalls](./docs/testing-pitfalls.md)
 - [Documentation Platform Evaluation](./docs/documentation-platform-evaluation.md)
@@ -161,5 +162,9 @@
 
 - [ADR Index](./adr/README.md)
   - [ADR-001: Record Architecture Decisions](./adr/001-record-architecture-decisions.md)
+  - [ADR-002: Rust Version](./adr/002-rust-version.md)
+  - [ADR-003: Soroban SDK Version](./adr/003-soroban-sdk-version.md)
+  - [ADR-004: Testing Framework](./adr/004-testing-framework.md)
+  - [ADR-005: Documentation Platform](./adr/005-documentation-platform.md)
   - [ADR Template](./adr/template.md)
 
