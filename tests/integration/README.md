@@ -169,6 +169,46 @@ cargo test -p integration-tests governance
 | `voting_time_constraints` | `voting-time-constraints` | `examples/governance/01-voting-time-constraints` |
 | `dao_treasury` | `dao-treasury` | `examples/governance/10-dao-treasury` |
 
+## Regression Test Suite (`regression_tests.rs`)
+
+Comprehensive cross-category regression suite (Issue #946 / Phase 6 #305). Validates critical contract invariants, state transitions, allowance boundaries, and backwards compatibility across Basics, Tokens, Governance, NFTs, Intermediate, and DeFi examples.
+
+Full specification and failure behavior documentation: [`REGRESSION_TEST_SUITE.md`](./REGRESSION_TEST_SUITE.md).
+
+| # | Test | Scope | Invariant Validated |
+|---|------|-------|---------------------|
+| 1 | `test_regression_basics_auth_storage_and_custom_errors` | Basics | Balance non-negativity, persistent storage integrity, error variants |
+| 2 | `test_regression_token_supply_and_allowance_invariants` | Tokens | Supply conservation ($\sum B = \text{Supply}$), allowance decrement, supply caps |
+| 3 | `test_regression_pausable_token_invariants` | Tokens | Mutation blocked while paused, clean resumption after unpause |
+| 4 | `test_regression_governance_proposal_and_voting_invariants` | Governance | Unique voter enforcement, lifecycle transitions, deterministic tallies |
+| 5 | `test_regression_nft_ownership_and_transfer_invariants` | NFTs | Atomic ownership handoff, non-owner transfer rejection |
+| 6 | `test_regression_registry_and_factory_invariants` | Intermediate | Dynamic contract discovery by symbol, version tracking |
+| 7 | `test_regression_defi_swap_invariants` | DeFi | AMM reserves integrity, zero-amount swap rejection |
+
+Run regression tests:
+```bash
+cargo test -p integration-tests --test regression_tests
+```
+
+## Compatibility Test Suite (`compatibility_tests.rs`)
+
+Cross-version and environment compatibility suite (Issue #950 / Phase 6 #306). Tests SDK type serialization, network protocol simulation (Protocols 20, 21, and 22), upgrade state preservation, storage schema evolution, and error code numeric stability.
+
+Full report and version matrix: [`COMPATIBILITY_REPORT.md`](./COMPATIBILITY_REPORT.md).
+
+| # | Test | Scope | Verification |
+|---|------|-------|--------------|
+| 1 | `test_sdk_version_type_compatibility` | SDK Types | `Address`, `Val`, `Symbol`, `String`, `Vec`, `Map`, `Bytes`, `BytesN` representation |
+| 2 | `test_network_compatibility_ledger_protocol_simulation` | Network Protocol | Ledger simulation across Protocol 20, 21, and 22 parameters |
+| 3 | `test_upgrade_compatibility_state_preservation` | Upgrades | Proxy state preservation across implementation contract upgrades |
+| 4 | `test_storage_layout_backward_compatibility` | Storage Layout | Schema evolution from legacy structs to modern structs with new fields |
+| 5 | `test_custom_error_code_stability` | Error Codes | Stable enum integer discriminators preventing RPC deserialization failures |
+
+Run compatibility tests:
+```bash
+cargo test -p integration-tests --test compatibility_tests
+```
+
 ## Running the Tests
 
 ### Prerequisites

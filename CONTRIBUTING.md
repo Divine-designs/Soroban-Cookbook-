@@ -42,6 +42,8 @@ all listings and we will remove it in the next pull request.
 pages you used, and whether you want a case study, a documentation review, or a
 demo slot on the monthly call. See
 [How to propose a partnership](./docs/ecosystem-partnerships.md#7-how-to-propose-a-partnership).
+For institutions, protocols, and developer tool providers seeking formal collaboration, review our
+[Formal Partnership Proposal Framework](./docs/formal-partnership-proposal.md), which details qualification criteria, mutual commitments, and an executable MOU template.
 
 ## Featured Projects
 

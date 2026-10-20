@@ -174,6 +174,7 @@ We track community health transparently so everyone can see how the project is g
 |---|---|
 | [Project Showcase](./SHOWCASE.md) | 10+ real production Stellar/Soroban projects built with the cookbook, with case studies and tracking |
 | [Ecosystem Partnerships](./docs/ecosystem-partnerships.md) | Partner projects, active collaborations, joint content, and the reciprocal cross-promotion model |
+| [Formal Partnership Proposal](./docs/formal-partnership-proposal.md) | Partnership qualification criteria, benefits, MOU agreement template, and onboarding roadmap |
 | [Featured Projects](./docs/featured-projects.md) | First 5 projects featured, each with a case study, runnable demo, developer interview, and promotion plan |
 | [Project Templates](./templates/) | Full-stack starter templates for Fungible Token, NFT Marketplace, and DAO dApps |
 | [Community Dashboard](./docs/community-dashboard.md) | Live rolling metrics — stars, PRs, response times, satisfaction |

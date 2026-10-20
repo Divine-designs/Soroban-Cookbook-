@@ -77,6 +77,7 @@
 - [Overview](./examples/governance.md)
 - [Governance Patterns Guide](./docs/governance-patterns.md)
 - [Governance Security Checklist](./docs/governance-security-checklist.md)
+- [Governance Best Practices](./docs/governance-best-practices.md)
 
 ### Core Learning Path
 - [01 · Simple Voting](./examples/governance/01-simple-voting.md)
