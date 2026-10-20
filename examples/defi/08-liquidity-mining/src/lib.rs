@@ -110,6 +110,7 @@ impl LiquidityMining {
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("Already initialized");
         }
+        admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.events()
             .publish((Symbol::new(&env, "initialized"),), admin);

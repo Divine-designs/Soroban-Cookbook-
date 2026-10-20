@@ -110,6 +110,7 @@ impl TokenMetadataContract {
         }
         require_non_empty(&name)?;
         require_non_empty(&symbol)?;
+        admin.require_auth();
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Name, &name);
