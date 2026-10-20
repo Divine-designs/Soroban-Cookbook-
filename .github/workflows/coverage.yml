@@ -1,0 +1,95 @@
+name: Coverage Dashboard
+
+on:
+  schedule:
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/coverage.yml"
+      - "scripts/coverage-dashboard.py"
+      - "tarpaulin.toml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coverage-dashboard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  coverage:
+    name: Collect coverage and update dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          # The default "-D warnings" would fail the build on lints; coverage
+          # only needs the tests to run.
+          rustflags: ""
+
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+
+      # Notes on the flags:
+      # - --run-types: tarpaulin skips everything under examples/ unless the
+      #   Examples run type is on, which would leave every example unmeasured.
+      # - --fail-under 0: tarpaulin.toml sets 90 for local use; the dashboard
+      #   records the number instead of gating on it.
+      # - --no-fail-fast: a failing test should not stop the report.
+      # - --exclude: these crates do not build their tests against the current
+      #   dependency versions (the two fuzz crates need
+      #   proptest-arbitrary-interop, which does not build against the latest
+      #   proptest). Drop them from the list as they are fixed.
+      - name: Collect coverage
+        run: |
+          status=0
+          ./scripts/ci-workspace.sh tarpaulin \
+            --run-types Tests --run-types Examples \
+            --fail-under 0 --no-fail-fast \
+            --exclude fuzz-testing \
+            --exclude soroban-cookbook-fuzz \
+            --exclude cross-chain-bridge \
+            --exclude nft-metadata-advanced || status=$?
+          if [ ! -s coverage/cobertura.xml ]; then
+            echo "::error::tarpaulin did not write a coverage report (exit status $status)"
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::tarpaulin exited with status $status (failing tests); the coverage report was still written"
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Build dashboard
+        run: python3 scripts/coverage-dashboard.py coverage/cobertura.xml --commit "$GITHUB_SHA"
+
+      # Pull requests only prove the pipeline works; the scheduled and manual
+      # runs publish the result.
+      - name: Commit dashboard
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/coverage-dashboard.md docs/coverage-data
+          if git diff --cached --quiet; then
+            echo "Dashboard unchanged"
+            exit 0
+          fi
+          git commit -m "chore(coverage): update coverage dashboard"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
