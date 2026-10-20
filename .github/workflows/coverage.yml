@@ -38,26 +38,42 @@ jobs:
         with:
           tool: cargo-tarpaulin
 
+      # Tarpaulin builds every crate's tests in one go, so a single crate whose
+      # tests do not compile stops the whole run. Find those crates first and
+      # leave them out. The two fuzz crates are always excluded: their
+      # proptest-arbitrary-interop dev-dependency does not build against the
+      # latest proptest, and the failure is in a registry crate, so it cannot
+      # be traced back to them here.
+      - name: Find crates whose tests do not build
+        run: |
+          cargo build --workspace --tests --keep-going \
+            --exclude fuzz-testing --exclude soroban-cookbook-fuzz \
+            2>&1 | tee "$RUNNER_TEMP/build.log" || true
+          # shellcheck disable=SC2016
+          grep -oE 'could not compile `[^`]+`' "$RUNNER_TEMP/build.log" | cut -d'`' -f2 | sort -u > "$RUNNER_TEMP/failed.txt" || true
+          cargo metadata --no-deps --format-version 1 | jq -r '.packages[].name' | sort -u > "$RUNNER_TEMP/members.txt"
+          comm -12 "$RUNNER_TEMP/failed.txt" "$RUNNER_TEMP/members.txt" > "$RUNNER_TEMP/skipped.txt"
+          {
+            echo "### Crates left out of the coverage run"
+            echo "Their tests do not build: fuzz-testing, soroban-cookbook-fuzz$(sed 's/^/, /' "$RUNNER_TEMP/skipped.txt" | tr -d '\n')"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "SKIPPED=$(sed 's/^/--exclude /' "$RUNNER_TEMP/skipped.txt" | tr '\n' ' ')" >> "$GITHUB_ENV"
+
       # Notes on the flags:
       # - --run-types: tarpaulin skips everything under examples/ unless the
       #   Examples run type is on, which would leave every example unmeasured.
       # - --fail-under 0: tarpaulin.toml sets 90 for local use; the dashboard
       #   records the number instead of gating on it.
       # - --no-fail-fast: a failing test should not stop the report.
-      # - --exclude: these crates do not build their tests against the current
-      #   dependency versions (the two fuzz crates need
-      #   proptest-arbitrary-interop, which does not build against the latest
-      #   proptest). Drop them from the list as they are fixed.
       - name: Collect coverage
         run: |
           status=0
+          # shellcheck disable=SC2086
           ./scripts/ci-workspace.sh tarpaulin \
             --run-types Tests --run-types Examples \
             --fail-under 0 --no-fail-fast \
-            --exclude fuzz-testing \
-            --exclude soroban-cookbook-fuzz \
-            --exclude cross-chain-bridge \
-            --exclude nft-metadata-advanced || status=$?
+            --exclude fuzz-testing --exclude soroban-cookbook-fuzz \
+            $SKIPPED || status=$?
           if [ ! -s coverage/cobertura.xml ]; then
             echo "::error::tarpaulin did not write a coverage report (exit status $status)"
             exit 1

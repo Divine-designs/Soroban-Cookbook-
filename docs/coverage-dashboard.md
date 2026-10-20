@@ -245,6 +245,7 @@ _Last updated 2026-10-20 from commit `e8a5a4b`._
 
 - **Collection:** [`coverage.yml`](../.github/workflows/coverage.yml) runs `cargo tarpaulin` over the workspace every Monday and on manual dispatch, and uploads the full HTML/XML/LCOV report as a workflow artifact for 90 days.
 - **Dashboard:** `scripts/coverage-dashboard.py` turns the Cobertura XML into this page, [`coverage-data/latest.json`](./coverage-data/latest.json) (per-example numbers) and [`coverage-data/history.json`](./coverage-data/history.json) (one entry per run, last 52). The scheduled run commits all three to `main`.
+- **Skipped crates:** tarpaulin builds every test in one go, so crates whose tests do not compile are left out of the run (the workflow summary lists them). They have no row here until they build again.
 - **Pull requests:** a pull request that changes the workflow, the script, or `tarpaulin.toml` runs the same collection without committing, so the pipeline is checked before it merges.
 
 Regenerate it locally:

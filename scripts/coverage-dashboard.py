@@ -182,6 +182,9 @@ def render(crates, history, entry, target):
         "page, [`coverage-data/latest.json`](./coverage-data/latest.json) (per-example numbers) and "
         "[`coverage-data/history.json`](./coverage-data/history.json) (one entry per run, last "
         f"{HISTORY_LIMIT}). The scheduled run commits all three to `main`.",
+        "- **Skipped crates:** tarpaulin builds every test in one go, so crates whose tests "
+        "do not compile are left out of the run (the workflow summary lists them). They have "
+        "no row here until they build again.",
         "- **Pull requests:** a pull request that changes the workflow, the script, or "
         "`tarpaulin.toml` runs the same collection without committing, so the pipeline is "
         "checked before it merges.",
