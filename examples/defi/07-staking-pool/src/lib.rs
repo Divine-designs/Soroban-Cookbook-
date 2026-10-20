@@ -160,6 +160,7 @@ impl StakingPoolContract {
         if env.storage().instance().has(&DataKey::Owner) {
             panic!("already initialized");
         }
+        owner.require_auth();
         assert!(reward_rate >= 0, "reward rate must be non-negative");
         env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage()
