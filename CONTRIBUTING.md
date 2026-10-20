@@ -339,4 +339,4 @@ CI also runs `cargo fmt --all -- --check` and `cargo clippy --tests --lib -- -D 
 - **Fuzz target** (`tests/fuzz/`): for property-based testing of parsing/serialization boundaries. Only needed when you're adding a new fuzzable surface, not for typical example changes.
 - **Documentation consistency** (`tests/docs-audit/`): for checks that a maintained document (e.g. an audit-scope or checklist file) stays in sync with the filesystem it describes. See `tests/docs-audit/README.md`.
 
-Coverage is measured with `cargo tarpaulin` in CI and uploaded to Codecov; run `cargo tarpaulin` locally if you want to check coverage before pushing.
+Coverage is measured with `cargo tarpaulin` in CI and uploaded to Codecov; run `cargo tarpaulin` locally if you want to check coverage before pushing. The [Coverage Dashboard](./docs/coverage-dashboard.md) shows coverage per example and how it changes week to week; it is regenerated every Monday by [`coverage.yml`](./.github/workflows/coverage.yml).
